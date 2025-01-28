@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.4.7",
+    "edt-iut-info-limoges": "^1.6.10",
+    "moment": "^2.30.1"
+  }
+}
