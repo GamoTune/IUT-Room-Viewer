@@ -3,22 +3,26 @@ async function create_fields(rooms) {
     const RDC = [];
     const E1 = [];
     const E2 = [];
+    const AUTRE = [];
 
     for (const [room, isAvailable] of Object.entries(rooms)) {
         const emoji = isAvailable ? '✅' : '❌';
         const roomDisplay = `${room} ${emoji}`;
 
-        if (room.startsWith('1')) {
+
+        if (room.startsWith('R')) {
+            RDC.push(roomDisplay);
+        }else if (room.startsWith('1')) {
             E1.push(roomDisplay);
         } else if (room.startsWith('2')) {
             E2.push(roomDisplay);
         } else {
-            RDC.push(roomDisplay);
+            AUTRE.push(roomDisplay);
         }
     }
 
     // Si aucune salle n'est disponible
-    if (RDC.length === 0 && E1.length === 0 && E2.length === 0) {
+    if (RDC.length === 0 && E1.length === 0 && E2.length === 0 && AUTRE.length === 0) {
         return {};
     }
 
@@ -32,6 +36,9 @@ async function create_fields(rooms) {
     }
     if (E2.length > 0) {
         embedFields.push({ name: 'Deuxième étage', value: E2.join('\n'), inline: true });
+    }
+    if (AUTRE.length > 0) {
+        embedFields.push({ name: 'Autres', value: AUTRE.join('\n'), inline: true });
     }
 
     return embedFields;
