@@ -22,6 +22,11 @@ const liste_salles = {
     "209": ["209"],
 };
 
+const groupes = {
+    "1" : "A",
+    "2" : "B",
+}
+
 
 // Récupération de tous les emplois du temps
 async function get_all_tables() {
@@ -68,7 +73,7 @@ async function get_all_rooms_availability(startTime, endTime) {
 
     for (const rooms of Object.keys(liste_salles)) {
         for (const room of liste_salles[rooms]) {
-            roomStatus[room] = true;
+            roomStatus[room] = {};
         }
     }
 
@@ -88,7 +93,14 @@ async function get_all_rooms_availability(startTime, endTime) {
                 for (const roomKey of Object.keys(liste_salles)) {
                     for (const rooms of liste_salles[roomKey]) {
                         if (rooms.includes(room)) {
-                            roomStatus[room] = false;
+                            roomStatus[room] = {
+                                isAvailable: false,
+                                lesson: {
+                                    type: lesson.content.type,
+                                    teacher: lesson.content.teacher,
+                                    group: `G${lesson.group.main}${lesson.group.sub ? `${groupes[lesson.group.sub]}` : ''}`,
+                                },
+                            };
                         }
                     }
                 }
