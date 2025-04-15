@@ -92,7 +92,7 @@ async function get_all_rooms_availability(startTime, endTime) {
                 // Si la salle est dans la liste des salles à vérifier
                 for (const roomKey of Object.keys(liste_salles)) {
                     for (const rooms of liste_salles[roomKey]) {
-                        if (rooms.includes(room)) {
+                        if (roomKey == room ) {
                             roomStatus[room] = {
                                 isAvailable: false,
                                 lesson: {
@@ -102,7 +102,7 @@ async function get_all_rooms_availability(startTime, endTime) {
                                 },
                             };
                         }
-                    }
+                    }   
                 }
             }
         }
@@ -111,6 +111,7 @@ async function get_all_rooms_availability(startTime, endTime) {
     // Renvoi de l'état des salles
     return roomStatus;
 }
+
 
 
 module.exports = {
