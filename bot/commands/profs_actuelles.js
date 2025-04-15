@@ -1,0 +1,101 @@
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const moment = require('moment');
+
+const { get_all_rooms_availability } = require('../../script.js');
+const { create_fields } = require('../../create_fields.js');
+
+
+async function isValidDate(dateString) {
+    return moment(dateString, 'YYYY-MM-DD HH:mm:ss', true).isValid();
+};
+
+module.exports = {
+    data: new SlashCommandBuilder()
+        .setName('profs_entre')
+        .setDescription('Affiche si un prof a cours actuellement.')
+        .addStringOption(option =>
+            option.setName('prof')
+                .setDescription('Nom du professeur')
+                .setRequired(true))
+                .addIntegerOption(option => option.setName('heure_début').setDescription('Heure de début').setRequired(true))
+                .addIntegerOption(option => option.setName('heure_fin').setDescription('Heure de fin').setRequired(true))
+                .addIntegerOption(option => option.setName('minute_debut').setDescription('Minute de début').setRequired(false))
+                .addIntegerOption(option => option.setName('minute_fin').setDescription('Minute de fin').setRequired(false))
+                .addIntegerOption(option => option.setName('jour').setDescription('Jour').setRequired(false))
+                .addIntegerOption(option => option.setName('mois').setDescription('Mois').setRequired(false))
+                .addIntegerOption(option => option.setName('année').setDescription('Année').setRequired(false))
+        ,
+    async execute(interaction) {
+
+        // Récupération des paramètres
+        var inputHourStart = interaction.options.getInteger('heure_début');
+        var inputHourEnd = interaction.options.getInteger('heure_fin');
+        var inputMinuteStart = interaction.options.getInteger('minute_debut') || 0;
+        var inputMinuteEnd = interaction.options.getInteger('minute_fin') || 0;
+        var inputDay = interaction.options.getInteger('jour') || new Date().getDate();
+        var inputMonth = interaction.options.getInteger('mois') || new Date().getMonth() + 1;
+        var inputYear = interaction.options.getInteger('année') || new Date().getFullYear();
+
+        if (inputHourStart < 10) {
+            inputHourStart = "0" + inputHourStart;
+        }
+        if (inputHourEnd < 10) {
+            inputHourEnd = "0" + inputHourEnd;
+        }
+        if (inputMinuteStart < 10) {
+            inputMinuteStart = "0" + inputMinuteStart;
+        }
+        if (inputMinuteEnd < 10) {
+            inputMinuteEnd = "0" + inputMinuteEnd;
+        }
+        if (inputDay < 10) {
+            inputDay = "0" + inputDay;
+        }
+        if (inputMonth < 10) {
+            inputMonth = "0" + inputMonth;
+        }
+
+
+        // Création des dates de début et de fin
+        const startTimeString = `${inputYear}-${inputMonth}-${inputDay} ${inputHourStart}:${inputMinuteStart}:00`;
+        const endTimeString = `${inputYear}-${inputMonth}-${inputDay} ${inputHourEnd}:${inputMinuteEnd}:00`;
+
+        if (!await isValidDate(startTimeString) || !await isValidDate(endTimeString)) {
+            await interaction.reply("La date n'est pas valide.");
+            return;
+        }
+
+        const startTime = new Date(startTimeString);
+        const endTime = new Date(endTimeString);
+
+        if (startTime >= endTime) {
+            await interaction.reply("L'heure de début doit être inférieure à l'heure de fin.");
+            return;
+        }
+        await interaction.reply('Vérification des salles...');
+
+        // Récupération du nom du professeur
+        const profName = interaction.options.getString('prof');
+
+        const rooms = await get_all_rooms_availability(startTime, startTime, profName);
+
+        // Création des champs pour l'embed
+        const embedFields = await create_fields(rooms);
+
+        if (embedFields == {}) {
+            await interaction.editReply('');
+            return;
+        }
+
+        // Création de l'embed
+        const embed = new EmbedBuilder()
+            .setColor('#a66949')
+            .setTitle(profName + "est actuellement en cours")
+            .setDescription('Il ce trouve dans la salles ❌ suivantes :')
+            .addFields(embedFields)
+            .setFooter({ text: '✅ : Salle libre | ❌ : Salle occupée' });
+
+        // Modification de la réponse pour afficher l'embed
+        await interaction.editReply({ content: '', embeds: [embed] });
+    },
+};

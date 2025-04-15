@@ -1,31 +1,6 @@
 const { YEARS, getTimetableEntries } = require('edt-iut-info-limoges');
-
-
-const liste_salles = {
-    "R46": ["R46"],
-    "R50": ["R50"],
-    "R51": ["R51"],
-    "R52": ["R52"],
-    "103": ["103"],
-    "104": ["104"],
-    "105": ["105"],
-    "108": ["108"],
-    "109": ["109"],
-    "111": ["111"],
-    "112": ["112"],
-    "104-5": ["104", "105"],
-    "108-9": ["108", "109"],
-    "111-2": ["111", "112"],
-    "205": ["205"],
-    "206": ["206"],
-    "208": ["208"],
-    "209": ["209"],
-};
-
-const groupes = {
-    "1" : "A",
-    "2" : "B",
-}
+const fs = require('fs');
+const path = require('path');
 
 
 // Récupération de tous les emplois du temps
@@ -61,10 +36,32 @@ async function get_all_rooms() {
     return rooms;
 }
 
+async function update_prof() {
+    const timeTablesEntry = await get_all_tables();
+    const profs = JSON.parse(fs.readFileSync(path.join(__dirname, 'data/profs.json'), 'utf8'));
+
+    for (const timeTableEntry of timeTablesEntry) {
+        const timeTable = await timeTableEntry.getTimetable();
+        for (const lesson of timeTable.lessons) {
+            const teacher = lesson.content.teacher;
+            if (!(teacher in profs || (teacher[0] === "G" && Number(teacher[1])) || teacher[0] === '.')) {
+                profs.push(teacher);
+            }
+        }
+    }
+
+    fs.writeFileSync(path.join(__dirname, 'data/profs.json'), JSON.stringify(profs, null, 2));
+}
+
+
 
 // Récupération de l'état de toutes les salles à une date/heure spécifique
-async function get_all_rooms_availability(startTime, endTime) {
+async function get_all_rooms_availability(startTime, endTime, prof=null) {
     // Récupération des emplois du temps des trois années
+
+    const liste_salles = JSON.parse(fs.readFileSync(path.join(__dirname, 'data/rooms.json'), 'utf8'));
+    const groupes = JSON.parse(fs.readFileSync(path.join(__dirname, 'data/groupes.json'), 'utf8'));
+
     const timeTablesEntry = await get_all_tables();
 
     // Initialisation de l'état des salles
@@ -92,7 +89,8 @@ async function get_all_rooms_availability(startTime, endTime) {
                 // Si la salle est dans la liste des salles à vérifier
                 for (const roomKey of Object.keys(liste_salles)) {
                     for (const rooms of liste_salles[roomKey]) {
-                        if (roomKey == room ) {
+                        console.log(lesson.content.teacher, prof)
+                        if (roomKey == room && (!prof || lesson.content.teacher == prof)) {
                             roomStatus[room] = {
                                 isAvailable: false,
                                 lesson: {
@@ -102,7 +100,7 @@ async function get_all_rooms_availability(startTime, endTime) {
                                 },
                             };
                         }
-                    }   
+                    }
                 }
             }
         }
