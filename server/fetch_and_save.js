@@ -173,7 +173,7 @@ async function add_to_db(data) {
                 groupId = rows[0].id;
             }
 
-            // ---- 6. Association lesson <-> group ----
+            // ---- 6. Link session <-> group ----
             await db.execute(
                 "INSERT IGNORE INTO lesson_group (lesson_id, group_id) VALUES (?, ?)",
                 [lessonId, groupId]

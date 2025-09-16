@@ -18,7 +18,7 @@ async function periodic() {
 // First full fetch before starting the interval
 async function main() {
     console.log("Performing initial full fetch of all timetables and saving to database...");
-    fetch_all_timetables().then(all => add_to_db(all).then(periodic()));
+    fetch_all_timetables().then(all => add_to_db(all)).then(() => periodic());
 };
 
 
