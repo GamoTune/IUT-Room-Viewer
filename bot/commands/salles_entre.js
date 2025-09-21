@@ -1,8 +1,9 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const moment = require('moment');
+require('dotenv').config();
 
-const { get_all_rooms_availability } = require('../../script.js');
-const { create_fields } = require('../../create_fields.js');
+const { rooms_availability } = require('../ask.js');
+const { create_fields } = require('../create_fields.js');
 
 
 async function isValidDate(dateString) {
@@ -13,7 +14,7 @@ async function isValidDate(dateString) {
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('salles_libres_entre')
-        .setDescription('Affiche la liste des salles libre entre 2 moments.')
+        .setDescription('Affiche l\'état des salles entre deux horaires.')
         .addIntegerOption(option => option.setName('heure_début').setDescription('Heure de début').setRequired(true))
         .addIntegerOption(option => option.setName('heure_fin').setDescription('Heure de fin').setRequired(true))
         .addIntegerOption(option => option.setName('minute_debut').setDescription('Minute de début').setRequired(false))
@@ -23,7 +24,7 @@ module.exports = {
         .addIntegerOption(option => option.setName('année').setDescription('Année').setRequired(false)),
     async execute(interaction) {
 
-        // Récupération des paramètres
+        // Get user input
         var inputHourStart = interaction.options.getInteger('heure_début');
         var inputHourEnd = interaction.options.getInteger('heure_fin');
         var inputMinuteStart = interaction.options.getInteger('minute_debut') || 0;
@@ -52,17 +53,19 @@ module.exports = {
         }
 
 
-        // Création des dates de début et de fin
-        const startTimeString = `${inputYear}-${inputMonth}-${inputDay} ${inputHourStart}:${inputMinuteStart}:00`;
-        const endTimeString = `${inputYear}-${inputMonth}-${inputDay} ${inputHourEnd}:${inputMinuteEnd}:00`;
+        // Create date strings
+        var startTimeString = `${inputYear}-${inputMonth}-${inputDay} ${inputHourStart}:${inputMinuteStart}:00`;
+        var endTimeString = `${inputYear}-${inputMonth}-${inputDay} ${inputHourEnd}:${inputMinuteEnd}:00`;
 
         if (!await isValidDate(startTimeString) || !await isValidDate(endTimeString)) {
             await interaction.reply("La date n'est pas valide.");
             return;
         }
 
+
         const startTime = new Date(startTimeString);
         const endTime = new Date(endTimeString);
+
 
         if (startTime >= endTime) {
             await interaction.reply("L'heure de début doit être inférieure à l'heure de fin.");
@@ -70,27 +73,27 @@ module.exports = {
         }
 
 
-        // Vérification des salles libres
-        await interaction.reply('Vérification des salles libres...');
-        const rooms = await get_all_rooms_availability(startTime, endTime);
+        // Get rooms availability
+        await interaction.reply('Récupération des salles...');
+        const rooms = await rooms_availability(startTime, endTime);
 
-        // Création des champs pour l'embed
+        // Create fields for the embed
         const embedFields = await create_fields(rooms);
 
         if (embedFields == {}) {
-            await interaction.editReply("Aucune salle n'est libre à ce moment.");
+            await interaction.editReply("Erreur lors de la récupération des salles.");
             return;
         }
 
-        // Création de l'embed
+        // Create the embed
         const embed = new EmbedBuilder()
             .setColor('#a66949')
-            .setTitle('Salles libres')
-            .setDescription(`Liste des salles libres entre **${inputHourStart}H${inputMinuteStart}** et **${inputHourEnd}H${inputMinuteEnd}** le **${inputDay}/${inputMonth}/${inputYear}**`)
+            .setTitle('Informations salles')
+            .setDescription(`Informations sur les salles entre **${inputHourStart}H${inputMinuteStart}** et **${inputHourEnd}H${inputMinuteEnd}** le **${inputDay}/${inputMonth}/${inputYear}**`)
             .addFields(embedFields)
-            .setFooter({ text: '✅ : Salle libre | ❌ : Salle occupée' });
+            .setFooter({ text: '✅ : Disponible  |  ❌ : Occupée'});
 
-        // Modification de la réponse pour afficher l'embed
+        // Edit the reply to show the embed
         await interaction.editReply({ content: "", embeds: [embed] });
     },
 };

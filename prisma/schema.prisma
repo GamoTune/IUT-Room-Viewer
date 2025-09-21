@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model content {
+  id     Int      @id @default(autoincrement())
+  code   String   @unique @db.VarChar(50)
+  name   String   @db.VarChar(100)
+  lesson lesson[]
+}
+
+model lesson {
+  id             Int            @id @default(autoincrement())
+  type           String         @db.VarChar(10)
+  start_datetime DateTime       @db.DateTime(0)
+  end_datetime   DateTime       @db.DateTime(0)
+  content_id     Int
+  room_id        Int?
+  teacher_id     Int?
+  content        content        @relation(fields: [content_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lesson_ibfk_1")
+  room           room?          @relation(fields: [room_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lesson_ibfk_2")
+  teacher        teacher?       @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lesson_ibfk_3")
+  lesson_group   lesson_group[]
+
+  @@unique([type, start_datetime, end_datetime, content_id, room_id, teacher_id], name: "type_start_end_content_room_teacher")
+  @@index([content_id], map: "content_id")
+  @@index([room_id], map: "room_id")
+  @@index([teacher_id], map: "teacher_id")
+}
+
+model lesson_group {
+  lesson_id Int
+  group_id  Int
+  lesson    lesson        @relation(fields: [lesson_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lesson_group_ibfk_1")
+  group     student_group @relation(fields: [group_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lesson_group_ibfk_2")
+
+  @@id([lesson_id, group_id])
+  @@index([group_id], map: "group_id")
+}
+
+model room {
+  id     Int      @id @default(autoincrement())
+  name   String   @unique @db.VarChar(20)
+  lesson lesson[]
+}
+
+model student_group {
+  id           Int            @id @default(autoincrement())
+  main_group   Int
+  sub_group    Int
+  lesson_group lesson_group[]
+
+  @@unique([main_group, sub_group], name: "main_group_sub_group")
+}
+
+model teacher {
+  id     Int      @id @default(autoincrement())
+  name   String?  @unique @db.VarChar(100)
+  lesson lesson[]
+}
