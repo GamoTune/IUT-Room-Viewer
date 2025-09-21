@@ -11,7 +11,7 @@ module.exports = {
 
         await interaction.deferReply();
 
-        // Création de l'embed
+        // Create the embed
         const embed = new EmbedBuilder()
             .setColor('#a66949')
             .setTitle('Aide des commandes')
@@ -23,7 +23,7 @@ module.exports = {
             )
             .setFooter({ text: "ver. " + process.env.VERSION });
 
-        // Modification de la réponse pour afficher l'embed
+        // Edit the reply to show the embed
         await interaction.editReply({ embeds: [embed] });
     },
 };

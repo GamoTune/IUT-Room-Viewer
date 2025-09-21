@@ -87,12 +87,4 @@ async function rooms_availability(startTime, endTime) {
 }
 
 
-const testStart = new Date("2025-09-01T08:00:00");
-const testEnd = new Date("2025-09-01T19:00:00");
-
-
-
-//rooms_availability(testStart, testEnd).then(data => { console.log(data); });
-
-
 module.exports = { rooms_availability };

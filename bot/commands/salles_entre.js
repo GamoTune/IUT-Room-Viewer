@@ -24,7 +24,7 @@ module.exports = {
         .addIntegerOption(option => option.setName('année').setDescription('Année').setRequired(false)),
     async execute(interaction) {
 
-        // Récupération des paramètres
+        // Get user input
         var inputHourStart = interaction.options.getInteger('heure_début');
         var inputHourEnd = interaction.options.getInteger('heure_fin');
         var inputMinuteStart = interaction.options.getInteger('minute_debut') || 0;
@@ -53,7 +53,7 @@ module.exports = {
         }
 
 
-        // Création des dates de début et de fin
+        // Create date strings
         var startTimeString = `${inputYear}-${inputMonth}-${inputDay} ${inputHourStart}:${inputMinuteStart}:00`;
         var endTimeString = `${inputYear}-${inputMonth}-${inputDay} ${inputHourEnd}:${inputMinuteEnd}:00`;
 
@@ -73,27 +73,27 @@ module.exports = {
         }
 
 
-        // Vérification des salles libres
-        await interaction.reply('Vérification des salles libres...');
+        // Get rooms availability
+        await interaction.reply('Récupération des salles...');
         const rooms = await rooms_availability(startTime, endTime);
 
-        // Création des champs pour l'embed
+        // Create fields for the embed
         const embedFields = await create_fields(rooms);
 
         if (embedFields == {}) {
-            await interaction.editReply("Aucune salle n'est libre à ce moment. ~~non le bot fait de la merde~~");
+            await interaction.editReply("Erreur lors de la récupération des salles.");
             return;
         }
 
-        // Création de l'embed
+        // Create the embed
         const embed = new EmbedBuilder()
             .setColor('#a66949')
-            .setTitle('Salles libres')
+            .setTitle('Informations salles')
             .setDescription(`Informations sur les salles entre **${inputHourStart}H${inputMinuteStart}** et **${inputHourEnd}H${inputMinuteEnd}** le **${inputDay}/${inputMonth}/${inputYear}**`)
             .addFields(embedFields)
             .setFooter({ text: '✅ : Disponible  |  ❌ : Occupée'});
 
-        // Modification de la réponse pour afficher l'embed
+        // Edit the reply to show the embed
         await interaction.editReply({ content: "", embeds: [embed] });
     },
 };

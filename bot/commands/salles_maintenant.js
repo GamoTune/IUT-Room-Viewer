@@ -9,7 +9,7 @@ module.exports = {
         .setName('salles_maintenant')
         .setDescription('Affiche l\'état actuel des salles .'),
     async execute(interaction) {
-        await interaction.reply('Vérification des salles...');
+        await interaction.reply('Récupération des salles...');
 
         // Set time
         const now = new Date();
@@ -17,20 +17,23 @@ module.exports = {
         // Get rooms availability
         const rooms = await rooms_availability(now, now);
 
-
-
-        // Création des champs pour l'embed
+        // Create fields for the embed
         const embedFields = await create_fields(rooms);
 
-        // Création de l'embed
+        if (embedFields == {}) {
+            await interaction.editReply("Erreur lors de la récupération des salles.");
+            return;
+        }
+
+        // Create the embed
         const embed = new EmbedBuilder()
             .setColor('#a66949')
-            .setTitle('Salles libres')
+            .setTitle('Informations salles')
             .setDescription('Informations sur les salles actuelles')
             .addFields(embedFields)
             .setFooter({ text: '✅ : Disponible  |  ❌ : Occupée'});
 
-        // Modification de la réponse pour afficher l'embed
+        // Edit the reply to show the embed
         await interaction.editReply({ content: '', embeds: [embed] });
     },
 };
