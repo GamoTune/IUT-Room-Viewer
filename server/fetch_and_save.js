@@ -1,25 +1,69 @@
 const { YEARS, getLatestTimetableEntry, getTimetableEntries } = require('edt-iut-info-limoges');
-const mysql = require("mysql2/promise");
 require("dotenv").config();
+const { PrismaClient } = require("@prisma/client");
+
 
 module.exports = { fetch_today_timetable, add_to_db, fetch_all_timetables };
 
 
-async function fetch_all_timetables() {
-    const timeTableEntryA1 = await getTimetableEntries(YEARS.A1);
-    const timeTableEntryA2 = await getTimetableEntries(YEARS.A2);
-    const timeTableEntryA3 = await getTimetableEntries(YEARS.A3);
-    
-    let timeTablesEntries = timeTableEntryA1.concat(timeTableEntryA2, timeTableEntryA3);
 
-    data = {
+const CUSTOM_YEARS = {
+    A1: -1,
+    A2: -2,
+    A3: -3,
+}
+
+
+
+async function format_groups(lessons, year){
+    for (const lesson of lessons) {
+        if (!lesson.group) {
+            lesson.group = { main: CUSTOM_YEARS[year], sub: -1 };
+        } else if (!("sub" in lesson.group) || lesson.group.sub === undefined) {
+            lesson.group.sub = -1;
+        }
+    }
+
+    return lessons;
+}
+
+async function format_rooms(lessons){
+    for (const lesson of lessons) {
+        if (lesson.content.room.includes("-")) {
+            const [roomBase, room_Number] = lesson.content.room.split("-");
+            lesson.content.room = roomBase;
+
+            // Create a copy of the lesson with the incremented room number
+            const newLesson = JSON.parse(JSON.stringify(lesson));
+            newLesson.content.room = (parseInt(roomBase) + 1).toString();
+            lessons.push(newLesson);
+        }
+        if (lesson.content.room.includes("A")) {
+            if (lesson.content.room.includes("Amp")) {
+                lesson.content.room = "Amph" + lesson.content.room[3];
+            } else {
+                lesson.content.room = "Amph" + lesson.content.room[1];
+            }
+        }
+    }
+
+    return lessons;
+}
+
+async function format_timetables(timeTablesEntries){
+    const data = {
         fetched_at: new Date().toISOString(),
         lessons: []
     };
-
+    
     for (const timeTableEntry of timeTablesEntries) {
         const timeTable = await timeTableEntry.getTimetable();
-        data.lessons = data.lessons.concat(timeTable.lessons);
+
+        // Format lessons to add custom groups
+        let lessons = await format_groups(timeTable.lessons, timeTableEntry.from_year);
+        lessons = await format_rooms(lessons);
+
+        data.lessons = data.lessons.concat(lessons);
     }
 
     return data;
@@ -27,41 +71,31 @@ async function fetch_all_timetables() {
 
 
 
+async function fetch_all_timetables() {
+    const timeTableEntryA1 = await getTimetableEntries(YEARS.A1);
+    const timeTableEntryA2 = await getTimetableEntries(YEARS.A2);
+    const timeTableEntryA3 = await getTimetableEntries(YEARS.A3);
+
+    let timeTablesEntries = timeTableEntryA1.concat(timeTableEntryA2, timeTableEntryA3);
+    
+    return await format_timetables(timeTablesEntries);
+}
 
 async function fetch_today_timetable() {
     const timeTableEntryA1 = await getLatestTimetableEntry(YEARS.A1);
     const timeTableEntryA2 = await getLatestTimetableEntry(YEARS.A2);
     const timeTableEntryA3 = await getLatestTimetableEntry(YEARS.A3);
 
-    const timeTableA1 = await timeTableEntryA1.getTimetable();
-    const timeTableA2 = await timeTableEntryA2.getTimetable();
-    const timeTableA3 = await timeTableEntryA3.getTimetable();
+    let timeTablesEntries = [timeTableEntryA1, timeTableEntryA2, timeTableEntryA3];
 
-    const allLessons = timeTableA1.lessons.concat(timeTableA2.lessons, timeTableA3.lessons);
-
-    const data = {
-        fetched_at: new Date().toISOString(),
-        lessons: allLessons
-    };
-
-
-
-    return data;
+    return await format_timetables(timeTablesEntries);
 }
-
 
 
 
 async function add_to_db(data) {
 
-    // Connect to the database
-    const db = await mysql.createConnection({
-        host: process.env.DB_HOST,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        database: process.env.DB_NAME,
-        port: process.env.DB_PORT
-    });
+    const prisma = new PrismaClient();
 
     for (const lesson of data.lessons) {
 
@@ -72,119 +106,97 @@ async function add_to_db(data) {
         if (!lesson.content.type) { lesson.content.type = "N/A"; }
 
         // ---- 1. Teacher ----
-        let [rows] = await db.execute(
-            "SELECT id FROM teacher WHERE short_code = ? OR fullname = ?",
-            [lesson.content.teacher, lesson.content.teacher]
-        );
-        let teacherId;
-        if (rows.length === 0) {
-            const [result] = await db.execute(
-                "INSERT INTO teacher (short_code, fullname) VALUES (?, ?)",
-                [lesson.content.teacher, lesson.content.teacher]
-            );
-            teacherId = result.insertId;
-        } else {
-            teacherId = rows[0].id;
-        }
+        const teacher = await prisma.teacher.upsert({
+            where: { name: lesson.content.teacher },
+            update: {}, // Nothing to update if the teacher already exists
+            create: { name: lesson.content.teacher },
+        });
+        const teacherId = teacher.id;
 
         // ---- 2. Room ----
-        [rows] = await db.execute("SELECT id FROM room WHERE name = ?", [lesson.content.room]);
-        let roomId;
-        if (rows.length === 0) {
-            const [result] = await db.execute(
-                "INSERT INTO room (name) VALUES (?)",
-                [lesson.content.room]
-            );
-            roomId = result.insertId;
-        } else {
-            roomId = rows[0].id;
-        }
+        const room = await prisma.room.upsert({
+            where: { name: lesson.content.room },
+            update: {},
+            create: { name: lesson.content.room },
+        });
+        const roomId = room.id;
 
         // ---- 3. Topic ----
-        [rows] = await db.execute(
-            "SELECT id FROM content WHERE code = ? AND name = ?",
-            [lesson.content.type, lesson.content.lesson_from_reference]
-        );
-        let contentId;
-        if (rows.length === 0) {
-            const [result] = await db.execute(
-                "INSERT INTO content (code, name) VALUES (?, ?)",
-                [lesson.content.type, lesson.content.lesson_from_reference]
-            );
-            contentId = result.insertId;
-        } else {
-            contentId = rows[0].id;
-        }
+
+        const content = await prisma.content.upsert({
+            where: {
+                code: lesson.content.type,
+                name: lesson.content.lesson_from_reference
+            },
+            update: {},
+            create: {
+                code: lesson.content.type,
+                name: lesson.content.lesson_from_reference
+            }
+        });
+        const contentId = content.id;
 
         // ---- 4. Session ----
-        [rows] = await db.execute(
-            `SELECT id FROM lesson
-            WHERE type = ? AND start_datetime = ? AND end_datetime = ?
-            AND content_id = ? AND room_id = ? AND teacher_id = ?`,
-            [
-                lesson.type,
-                lesson.start_date.toJSDate(),
-                lesson.end_date.toJSDate(),
-                contentId,
-                roomId,
-                teacherId
-            ]
-        );
+        const session = await prisma.lesson.upsert({
+            where: {
+                type_start_end_content_room_teacher: {
+                    type: lesson.type,
+                    start_datetime: lesson.start_date,
+                    end_datetime: lesson.end_date,
+                    content_id: contentId,
+                    room_id: roomId,
+                    teacher_id: teacherId,
+                },
+            },
+            update: {},
+            create: {
+                type: lesson.type,
+                start_datetime: lesson.start_date,
+                end_datetime: lesson.end_date,
+                content: { connect: { id: contentId } },
+                room: { connect: { id: roomId } },
+                teacher: { connect: { id: teacherId } },
+            },
+        });
+        const lessonId = session.id;
 
-        let lessonId;
-        if (rows.length === 0) {
-            const [result] = await db.execute(
-                `INSERT INTO lesson (type, start_datetime, end_datetime, content_id, room_id, teacher_id)
-                VALUES (?, ?, ?, ?, ?, ?)`,
-                [
-                    lesson.type,
-                    lesson.start_date.toJSDate(),
-                    lesson.end_date.toJSDate(),
-                    contentId,
-                    roomId,
-                    teacherId
-                ]
-            );
-
-            lessonId = result.insertId;
-            console.log(`✅ The session already exist: ${lesson.type} - ${lesson.content.lesson_from_reference}`);
-        } else {
-            lessonId = rows[0].id;
-            console.log(`⚠ The session already exist: ${lesson.type} - ${lesson.content.lesson_from_reference}`);
-        }
 
         // ---- 5. Group ----
-        const mainGroup = lesson.group?.main || null;
-        const subGroup = lesson.group?.sub || null;
+        const mainGroup = lesson.group?.main;
+        const subGroup = lesson.group?.sub;
 
-        if (mainGroup !== null) {
-            [rows] = await db.execute(
-                "SELECT id FROM student_group WHERE main_group = ? AND (sub_group = ? OR (? IS NULL AND sub_group IS NULL))",
-                [mainGroup, subGroup, subGroup]
-            );
-            let groupId;
-            if (rows.length === 0) {
-                const [result] = await db.execute(
-                    "INSERT INTO student_group (main_group, sub_group) VALUES (?, ?)",
-                    [mainGroup, subGroup]
-                );
-                groupId = result.insertId;
-            } else {
-                groupId = rows[0].id;
+        const group = await prisma.student_group.upsert({
+            where: {
+                main_group_sub_group: {
+                    main_group: mainGroup,
+                    sub_group: subGroup,
+                },
+            },
+            update: {},
+            create: {
+                main_group: mainGroup,
+                sub_group: subGroup,
+            },
+        });
+        const groupId = group.id;
+
+        // ---- 6. Link session <-> group ----
+        await prisma.lesson_group.upsert({
+            where: {
+                lesson_id_group_id: {
+                    lesson_id: lessonId,
+                    group_id: groupId,
+                }
+            },
+            update: {},
+            create: {
+                lesson: { connect: { id: lessonId } },
+                group: { connect: { id: groupId } },
             }
-
-            // ---- 6. Link session <-> group ----
-            await db.execute(
-                "INSERT IGNORE INTO lesson_group (lesson_id, group_id) VALUES (?, ?)",
-                [lessonId, groupId]
-            );
-        }
+        });
     }
 
-    await db.end();
     console.log("🎉 Import finished");
+
+    await prisma.$disconnect();
 }
-
-
-
-module.exports = { fetch_today_timetable, add_to_db, fetch_all_timetables };

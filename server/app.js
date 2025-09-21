@@ -1,7 +1,7 @@
 const { fetch_all_timetables, fetch_today_timetable, add_to_db } = require("./fetch_and_save");
 
 
-const WAIT_TIME = 1000 * 60 * 60 * 24; // 24 hours in milliseconds ; milliseconds * seconds * minutes * hours
+const WAIT_TIME = 1000 * 60 * 60 * 1; // 1 hours in milliseconds ; milliseconds * seconds * minutes * hours
 
 async function periodic() {
     console.log("Fetching today's timetable and saving to database...");
@@ -22,4 +22,5 @@ async function main() {
 };
 
 
-main()
+main();
+
