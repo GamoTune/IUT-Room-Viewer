@@ -1,25 +1,26 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-
-const { get_all_rooms_availability } = require('../../script.js');
-const { create_fields } = require('../../create_fields.js');
+const { rooms_availability } = require('../ask');
+const { create_fields } = require('../create_fields')
+require('dotenv').config();
 
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('salles_libres_actuelles')
-        .setDescription('Affiche la liste des salles libres actuellement.'),
+        .setName('salles_maintenant')
+        .setDescription('Affiche l\'état actuel des salles .'),
     async execute(interaction) {
         await interaction.reply('Vérification des salles...');
-        const startTime = new Date();
-        const rooms = await get_all_rooms_availability(startTime, startTime);
+
+        // Set time
+        const now = new Date();
+
+        // Get rooms availability
+        const rooms = await rooms_availability(now, now);
+
+
 
         // Création des champs pour l'embed
         const embedFields = await create_fields(rooms);
-
-        if (embedFields == {}) {
-            await interaction.editReply('Aucune salle n\'est libre actuellement.');
-            return;
-        }
 
         // Création de l'embed
         const embed = new EmbedBuilder()
@@ -27,7 +28,7 @@ module.exports = {
             .setTitle('Salles libres')
             .setDescription('Liste des salles libres actuellement.')
             .addFields(embedFields)
-            .setFooter({ text: '✅ : Salle libre | ❌ : Salle occupée' });
+            .setFooter({ text: '✅ : Libre | ❌ : Occupée | Version : ' + process.env.VERSION });
 
         // Modification de la réponse pour afficher l'embed
         await interaction.editReply({ content: '', embeds: [embed] });
