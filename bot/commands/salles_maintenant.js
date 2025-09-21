@@ -26,9 +26,9 @@ module.exports = {
         const embed = new EmbedBuilder()
             .setColor('#a66949')
             .setTitle('Salles libres')
-            .setDescription('Liste des salles libres actuellement.')
+            .setDescription('Informations sur les salles actuelles')
             .addFields(embedFields)
-            .setFooter({ text: '✅ : Libre | ❌ : Occupée | Version : ' + process.env.VERSION });
+            .setFooter({ text: '✅ : Disponible  |  ❌ : Occupée'});
 
         // Modification de la réponse pour afficher l'embed
         await interaction.editReply({ content: '', embeds: [embed] });

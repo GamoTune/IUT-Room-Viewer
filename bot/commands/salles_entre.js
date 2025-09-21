@@ -89,9 +89,9 @@ module.exports = {
         const embed = new EmbedBuilder()
             .setColor('#a66949')
             .setTitle('Salles libres')
-            .setDescription(`Liste des salles libres entre **${inputHourStart}H${inputMinuteStart}** et **${inputHourEnd}H${inputMinuteEnd}** le **${inputDay}/${inputMonth}/${inputYear}**`)
+            .setDescription(`Informations sur les salles entre **${inputHourStart}H${inputMinuteStart}** et **${inputHourEnd}H${inputMinuteEnd}** le **${inputDay}/${inputMonth}/${inputYear}**`)
             .addFields(embedFields)
-            .setFooter({ text: '✅ : Disponible  |  ❌ : Occupée   |   ' + process.env.VERSION });
+            .setFooter({ text: '✅ : Disponible  |  ❌ : Occupée'});
 
         // Modification de la réponse pour afficher l'embed
         await interaction.editReply({ content: "", embeds: [embed] });
