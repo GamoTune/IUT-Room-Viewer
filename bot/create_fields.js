@@ -29,7 +29,7 @@ async function format_room_info(name, room) {
         room = room[0];
         room.main_group = code_main_group[room.main_group] ?? room.main_group;
         room.sub_group = code_sub_group[room.sub_group] ?? '';
-        room = '`' + name +' ❌ - ' + room.code + ' (' + room.main_group + room.sub_group + ')' + '`'
+        room = '`' + name +' ❌ - ' + room.code + ' (' + room.teacher_name + ') (' + room.main_group + room.sub_group + ')' + '`'
     }
     return room;
 }
