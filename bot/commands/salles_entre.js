@@ -17,7 +17,7 @@ async function isValidDate(dateString) {
 module.exports = {
     // Define the slash command structure and options
     data: new SlashCommandBuilder()
-        .setName('salles_libres_entre')
+        .setName('salles_entre')
         .setDescription('Affiche l\'état des salles entre deux horaires.') // Display room status between two time periods
         .addIntegerOption(option => option.setName('heure_début').setDescription('Heure de début').setRequired(true)) // Start hour (required)
         .addIntegerOption(option => option.setName('heure_fin').setDescription('Heure de fin').setRequired(true)) // End hour (required)
