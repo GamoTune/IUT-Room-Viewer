@@ -15,7 +15,7 @@ const code_main_group = {
 const code_sub_group = {
     '-1': null,
     '0': 'A',
-    '-2': 'B'
+    '1': 'B'
 }
 
 
