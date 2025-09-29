@@ -65,10 +65,6 @@ module.exports = {
         const startTime = new Date(startTimeString);
         const endTime = new Date(endTimeString);
 
-        console.log(startTime);
-        console.log(endTime);
-
-
         if (startTime > endTime) {
             await interaction.reply("L'heure de début doit être inférieure à l'heure de fin.");
             return;

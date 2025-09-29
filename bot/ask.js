@@ -80,7 +80,18 @@ async function rooms_availability(startTime, endTime) {
     const roomInUse = {}
     for (const roomName of roomNames) {
         const info = await get_info_about(roomName, start, end);
-        roomInUse[roomName] = info.length > 0 ? info : null;
+
+        // Special case: merge info for R46 and R47
+        let mergedInfo = info;
+        if (roomName === "R46") {
+            const r47Info = await get_info_about("R47", start, end);
+            mergedInfo = [...info, ...r47Info];
+        } else if (roomName === "R47") {
+            const r46Info = await get_info_about("R46", start, end);
+            mergedInfo = [...info, ...r46Info];
+        }
+
+        roomInUse[roomName] = mergedInfo.length > 0 ? mergedInfo : null;
     }
 
     return roomInUse;
