@@ -1,7 +1,7 @@
 // Module for querying room availability data from the database
 require("dotenv").config();
 // Prisma ORM client for database operations
-const { PrismaClient } = require("@prisma/client");
+const { PrismaClient } = require("../generated/edt-client");
 
 
 

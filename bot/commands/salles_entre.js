@@ -2,6 +2,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const moment = require('moment');
 require('dotenv').config();
+const { logCommand } = require('../logger.js');
 
 // Import custom modules for room data and field creation
 const { rooms_availability } = require('../ask.js');
@@ -105,5 +106,7 @@ module.exports = {
 
         // Update the initial reply with the formatted embed
         await interaction.editReply({ content: "", embeds: [embed] });
+
+        logCommand(interaction);
     },
 };

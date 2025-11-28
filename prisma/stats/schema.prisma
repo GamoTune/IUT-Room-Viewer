@@ -1,0 +1,27 @@
+generator client_stats {
+  provider = "prisma-client-js"
+  output   = "../../generated/stats-client"
+}
+
+datasource stats_db {
+  provider = "mysql"
+  url      = env("STATS_DATABASE_URL")
+}
+
+model requests {
+  id           Int      @id @default(autoincrement())
+  user         Int
+  linked_user  users    @relation(fields: [user], references: [id], onDelete: Cascade)
+  request_date DateTime @stats_db.DateTime(0)
+  request_text String   @stats_db.Text
+
+  @@index([user], map: "idx_user")
+}
+
+model users {
+  id       Int        @id @default(autoincrement())
+  user_id  BigInt     @unique(map: "user_id") @stats_db.UnsignedBigInt
+  name     String?    @stats_db.TinyText
+  
+  requests requests[]
+}

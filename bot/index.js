@@ -3,6 +3,9 @@ const path = require('node:path');
 const { Client, Collection, GatewayIntentBits, REST, Routes } = require('discord.js');
 require('dotenv').config()
 
+// Permet à JSON.stringify de gérer les BigInt en les transformant en string
+BigInt.prototype.toJSON = function () { return this.toString(); };
+
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 client.commands = new Collection();

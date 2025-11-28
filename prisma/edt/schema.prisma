@@ -1,24 +1,25 @@
-generator client {
+generator client_edt {
   provider = "prisma-client-js"
+  output   = "../../generated/edt-client"
 }
 
-datasource db {
+datasource edt_db {
   provider = "mysql"
-  url      = env("DATABASE_URL")
+  url      = env("EDT_DATABASE_URL")
 }
 
 model content {
   id     Int      @id @default(autoincrement())
-  code   String   @unique @db.VarChar(50)
-  name   String   @db.VarChar(100)
+  code   String   @unique @edt_db.VarChar(50)
+  name   String   @edt_db.VarChar(100)
   lesson lesson[]
 }
 
 model lesson {
   id             Int            @id @default(autoincrement())
-  type           String         @db.VarChar(10)
-  start_datetime DateTime       @db.DateTime(0)
-  end_datetime   DateTime       @db.DateTime(0)
+  type           String         @edt_db.VarChar(10)
+  start_datetime DateTime       @edt_db.DateTime(0)
+  end_datetime   DateTime       @edt_db.DateTime(0)
   content_id     Int
   room_id        Int?
   teacher_id     Int?
@@ -28,16 +29,17 @@ model lesson {
   lesson_group   lesson_group[]
 
   @@unique([type, start_datetime, end_datetime, content_id, room_id, teacher_id], name: "type_start_end_content_room_teacher")
+  
   @@index([content_id], map: "content_id")
   @@index([room_id], map: "room_id")
   @@index([teacher_id], map: "teacher_id")
 }
 
 model lesson_group {
-  lesson_id Int
-  group_id  Int
-  lesson    lesson        @relation(fields: [lesson_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lesson_group_ibfk_1")
-  group     student_group @relation(fields: [group_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lesson_group_ibfk_2")
+  lesson_id     Int
+  group_id      Int
+  lesson        lesson        @relation(fields: [lesson_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lesson_group_ibfk_1")
+  group student_group @relation(fields: [group_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lesson_group_ibfk_2")
 
   @@id([lesson_id, group_id])
   @@index([group_id], map: "group_id")
@@ -45,7 +47,7 @@ model lesson_group {
 
 model room {
   id     Int      @id @default(autoincrement())
-  name   String   @unique @db.VarChar(20)
+  name   String   @unique @edt_db.VarChar(20)
   lesson lesson[]
 }
 
@@ -55,11 +57,11 @@ model student_group {
   sub_group    Int
   lesson_group lesson_group[]
 
-  @@unique([main_group, sub_group], name: "main_group_sub_group")
+  @@unique([main_group, sub_group])
 }
 
 model teacher {
   id     Int      @id @default(autoincrement())
-  name   String?  @unique @db.VarChar(100)
+  name   String?  @unique @edt_db.VarChar(100)
   lesson lesson[]
 }

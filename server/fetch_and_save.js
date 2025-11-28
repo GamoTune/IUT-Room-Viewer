@@ -2,7 +2,7 @@
 const { YEARS, getLatestTimetableEntry, getTimetableEntries } = require('edt-iut-info-limoges');
 require("dotenv").config();
 // Prisma ORM client for database operations
-const { PrismaClient } = require("@prisma/client");
+const { PrismaClient } = require("../generated/edt-client");
 
 // Export main functions for timetable fetching and database operations
 module.exports = { fetch_today_timetable, add_to_db, fetch_all_timetables };

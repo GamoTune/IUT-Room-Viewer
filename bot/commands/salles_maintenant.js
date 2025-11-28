@@ -5,6 +5,7 @@ require('dotenv').config();
 // Import custom modules for room data and field creation
 const { rooms_availability } = require('../ask');
 const { create_fields } = require('../create_fields')
+const { logCommand } = require('../logger');
 
 
 module.exports = {
@@ -16,17 +17,12 @@ module.exports = {
         // Send initial loading message to user
         await interaction.reply('Récupération des salles...');
 
-        // Get current timestamp for real-time room availability
         const now = new Date();
-
-        // Fetch current room availability (using same time for start and end to get current status)
         const rooms = await rooms_availability(now, now);
-
-        // Format room data into Discord embed fields
         const embedFields = await create_fields(rooms);
 
         // Handle error if no room data could be retrieved
-        if (embedFields == {}) {
+        if (Object.keys(embedFields).length === 0) {
             await interaction.editReply("Erreur lors de la récupération des salles.");
             return;
         }
@@ -41,5 +37,7 @@ module.exports = {
 
         // Update the initial reply with the formatted embed
         await interaction.editReply({ content: '', embeds: [embed] });
+
+        logCommand(interaction);
     },
 };

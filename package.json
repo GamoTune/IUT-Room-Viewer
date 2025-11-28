@@ -1,6 +1,19 @@
 {
+  "name": "iut-room-viewer",
+  "version": "2.2.0",
+  "scripts": {
+    "start": "node index.js",
+    
+    "//": "--- Commandes Prisma ---",
+    "gen:edt": "prisma generate --schema=./prisma/edt/schema.prisma",
+    "gen:stats": "prisma generate --schema=./prisma/stats/schema.prisma",
+    "generate": "npm run gen:edt && npm run gen:stats",
+
+    "//": "--- Le script magique ---",
+    "postinstall": "npm run generate"
+  },
   "dependencies": {
-    "@prisma/client": "^6.16.2",
+    "@prisma/client": "^6.19.0",
     "discord.js": "^14.14.1",
     "dotenv": "^16.4.7",
     "edt-iut-info-limoges": "^1.7.0",
@@ -8,6 +21,6 @@
     "mysql2": "^3.14.1"
   },
   "devDependencies": {
-    "prisma": "^6.16.2"
+    "prisma": "^6.19.0"
   }
 }
