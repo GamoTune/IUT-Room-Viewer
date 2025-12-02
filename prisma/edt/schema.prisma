@@ -29,17 +29,16 @@ model lesson {
   lesson_group   lesson_group[]
 
   @@unique([type, start_datetime, end_datetime, content_id, room_id, teacher_id], name: "type_start_end_content_room_teacher")
-  
   @@index([content_id], map: "content_id")
   @@index([room_id], map: "room_id")
   @@index([teacher_id], map: "teacher_id")
 }
 
 model lesson_group {
-  lesson_id     Int
-  group_id      Int
-  lesson        lesson        @relation(fields: [lesson_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lesson_group_ibfk_1")
-  group student_group @relation(fields: [group_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lesson_group_ibfk_2")
+  lesson_id Int
+  group_id  Int
+  lesson    lesson        @relation(fields: [lesson_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lesson_group_ibfk_1")
+  group     student_group @relation(fields: [group_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lesson_group_ibfk_2")
 
   @@id([lesson_id, group_id])
   @@index([group_id], map: "group_id")

@@ -10,18 +10,18 @@ datasource stats_db {
 
 model requests {
   id           Int      @id @default(autoincrement())
-  user         Int
-  linked_user  users    @relation(fields: [user], references: [id], onDelete: Cascade)
   request_date DateTime @stats_db.DateTime(0)
   request_text String   @stats_db.Text
+  user         Int
+  linked_user  users    @relation(fields: [user], references: [id], onDelete: Cascade)
 
   @@index([user], map: "idx_user")
 }
 
 model users {
-  id       Int        @id @default(autoincrement())
-  user_id  BigInt     @unique(map: "user_id") @stats_db.UnsignedBigInt
-  name     String?    @stats_db.TinyText
-  
-  requests requests[]
+  id          Int        @id @default(autoincrement())
+  user_id     BigInt     @unique(map: "user_id") @stats_db.UnsignedBigInt
+  name        String?    @stats_db.TinyText
+  global_name String?    @stats_db.TinyText
+  requests    requests[]
 }

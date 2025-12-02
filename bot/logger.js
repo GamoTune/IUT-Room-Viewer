@@ -7,6 +7,7 @@ async function logCommand(interaction) {
     try {
         const userId = BigInt(interaction.user.id);
         const userName = interaction.user.username;
+        const globalName = interaction.user.global_name || interaction.user.username;
         // 1. Récupérer le nom de base (/commande)
         let fullCommandString = `/${interaction.commandName}`;
 
@@ -46,10 +47,11 @@ async function logCommand(interaction) {
         // 1. On s'assure que l'utilisateur existe (Upsert)
         const userDb = await prismaStats.users.upsert({
             where: { user_id: userId },
-            update: { name: userName },
+            update: { name: userName, global_name: globalName },
             create: {
                 user_id: userId,
-                name: userName
+                name: userName,
+                global_name: globalName
             }
         });
 
