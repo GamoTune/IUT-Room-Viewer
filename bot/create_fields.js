@@ -99,7 +99,15 @@ async function create_fields(rooms) {
 
 }
 
+
+
+async function create_edt_fields(infos){
+    
+}
+
 // Export the main function for creating formatted Discord embed fields
 module.exports = {
-    create_fields
+    create_fields,
+    code_main_group,
+    code_sub_group
 }
