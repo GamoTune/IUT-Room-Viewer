@@ -35,7 +35,8 @@ module.exports = {
         ),
     async execute(interaction) {
         // Send initial loading message to user
-        await interaction.reply('Cette commande est en cours de développement.');
+        await interaction.reply('Cette commande est en cours de développement...');
+        return;
 
         console.log(interaction.options.getString('groupe'));
         console.log(await edt_group(interaction.options.getString('groupe'), new Date(), new Date()));
