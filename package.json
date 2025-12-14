@@ -1,6 +1,6 @@
 {
   "name": "iut-room-viewer",
-  "version": "2.2.0",
+  "version": "3.0.0",
   "scripts": {
     "start": "node index.js",
     "//": "--- Le script magique ---",

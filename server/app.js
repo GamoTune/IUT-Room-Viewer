@@ -1,8 +1,6 @@
 // Main server application for automated timetable fetching and database updates
 // Performs initial full sync then runs periodic updates
-const { fsync } = require("fs");
 const { fetch_all_timetables, fetch_today_timetable, add_to_db } = require("./fetch_and_save");
-const fs = require("fs").promises;
 
 // Configuration: Update interval set to 1 hour
 const WAIT_TIME = 1000 * 60 * 60 * 1; // 1 hour in milliseconds (ms * sec * min * hours)
@@ -34,9 +32,9 @@ async function periodic() {
 async function main() {
     console.log("Performing initial full fetch of all timetables and saving to database...");
     // Initial complete sync: fetch all available timetables for all years
-    fetch_today_timetable()
+    fetch_all_timetables()
         .then(all => add_to_db(all)) // Save complete dataset to database
-        //.then(() => periodic()); // Start periodic update cycle
+        .then(() => periodic()); // Start periodic update cycle
 };
 
 // Start the application
