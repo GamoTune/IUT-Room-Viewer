@@ -23,6 +23,8 @@ model lesson {
   content_id     Int
   room_id        Int?
   teacher_id     Int?
+  edt_id         Int?
+  edt_index      edt_index?     @relation(fields: [edt_id], references: [id], onDelete: Cascade, map: "lesson_edt_index_id_fk")
   content        content        @relation(fields: [content_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lesson_ibfk_1")
   room           room?          @relation(fields: [room_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lesson_ibfk_2")
   teacher        teacher?       @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lesson_ibfk_3")
@@ -32,6 +34,7 @@ model lesson {
   @@index([content_id], map: "content_id")
   @@index([room_id], map: "room_id")
   @@index([teacher_id], map: "teacher_id")
+  @@index([edt_id], map: "lesson_edt_index_id_fk")
 }
 
 model lesson_group {
@@ -64,3 +67,12 @@ model teacher {
   name   String?  @unique @edt_db.VarChar(100)
   lesson lesson[]
 }
+
+  model edt_index {
+    id           Int      @id @default(autoincrement())
+    link         String   @edt_db.Text
+    last_updated DateTime @edt_db.DateTime(0)
+    week_number  Int
+    from_year    String   @edt_db.TinyText
+    lesson       lesson[]
+  }

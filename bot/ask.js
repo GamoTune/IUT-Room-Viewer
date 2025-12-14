@@ -2,6 +2,7 @@
 require("dotenv").config();
 // Prisma ORM client for database operations
 const { PrismaClient } = require("../generated/edt-client");
+const { code_main_group, code_sub_group } = require("./create_fields");
 
 
 
@@ -122,5 +123,139 @@ async function rooms_availability(startTime, endTime) {
 }
 
 
+
+async function edt_group(groupName, startTime, endTime) {
+    const startDate = new Date(startTime);
+    const endDate = new Date(endTime);
+
+    const prisma = new PrismaClient();
+
+    const groupNumber = groupName.slice(0, -1);  // Extract main group (e.g., 'G4B' -> 'G4')
+    const groupLetter = groupName.slice(2);   // Extract sub-group (e.g., 'G4B' -> 'B')
+
+    // Convert group number and letter to database format
+
+    let formattedGroupNumber;
+    let formattedSubGroupLetter;
+
+    for (group of Object.keys(code_main_group)) {
+        if (code_main_group[group] === groupNumber) {
+            formattedGroupNumber = parseInt(group);
+            break;
+        }
+    }
+
+    for (subgroup of Object.keys(code_sub_group)) {
+        if (code_sub_group[subgroup] === groupLetter) {
+            formattedSubGroupLetter = parseInt(subgroup);
+            break;
+        }
+    }
+
+    const groupInfo = await prisma.lesson.findMany({
+        where: {
+            lesson_group: {
+                some: {
+                    group: {
+                        main_group: formattedGroupNumber,
+                        sub_group: formattedSubGroupLetter
+                    }
+                }
+            },
+            AND: [
+                {
+                    start_datetime: {
+                        lt: endDate.toISOString()
+                    }
+                },
+                {
+                    end_datetime: {
+                        gt: startDate.toISOString()
+                    }
+                }
+            ]
+        },
+        include: {
+            room: true,
+            content: true,
+            teacher: true,
+            lesson_group: {
+                include: {
+                    group: true
+                }
+            }
+        },
+        orderBy: {
+            start_datetime: 'asc'
+        }
+    });
+
+    return groupInfo.map(l => ({
+        salle: l.room?.name,
+        type: l.type,
+        start_datetime: l.start_datetime,
+        end_datetime: l.end_datetime,
+        code: l.content?.code,
+        content_name: l.content?.name,
+        teacher_name: l.teacher?.name,
+        main_group: l.lesson_group[0]?.group?.main_group,
+        sub_group: l.lesson_group[0]?.group?.sub_group
+    }));
+}
+
+
+async function edt_teacher(teacherName, startTime, endTime) {
+    const startDate = new Date(startTime);
+    const endDate = new Date(endTime);
+
+    const prisma = new PrismaClient();
+
+    const teacherInfo = await prisma.lesson.findMany({
+        where: {
+            teacher: {
+                name: teacherName
+            },
+            AND: [
+                {
+                    start_datetime: {
+                        lt: endDate.toISOString()
+                    }
+                },
+                {
+                    end_datetime: {
+                        gt: startDate.toISOString()
+                    }
+                }
+            ]
+        },
+        include: {
+            room: true,
+            content: true,
+            teacher: true,
+            lesson_group: {
+                include: {
+                    group: true
+                }
+            }
+        },
+        orderBy: {
+            start_datetime: 'asc'
+        }
+    });
+
+    return teacherInfo.map(l => ({
+        salle: l.room?.name,
+        type: l.type,
+        start_datetime: l.start_datetime,
+        end_datetime: l.end_datetime,
+        code: l.content?.code,
+        content_name: l.content?.name,
+        teacher_name: l.teacher?.name,
+        main_group: l.lesson_group[0]?.group?.main_group,
+        sub_group: l.lesson_group[0]?.group?.sub_group
+    }));
+}
+
+
 // Export the main function for checking room availability
-module.exports = { rooms_availability };
+module.exports = { rooms_availability, edt_group, edt_teacher };
