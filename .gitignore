@@ -133,3 +133,5 @@ dist
 .DS_Store
 prisma/migrations
 generated/
+/src/generated/prisma
+bun.lock

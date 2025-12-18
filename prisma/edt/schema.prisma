@@ -5,7 +5,6 @@ generator client_edt {
 
 datasource edt_db {
   provider = "mysql"
-  url      = env("EDT_DATABASE_URL")
 }
 
 model content {

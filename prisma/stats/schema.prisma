@@ -5,7 +5,6 @@ generator client_stats {
 
 datasource stats_db {
   provider = "mysql"
-  url      = env("STATS_DATABASE_URL")
 }
 
 model requests {
