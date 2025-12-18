@@ -1,26 +1,18 @@
 {
   "name": "iut-room-viewer",
   "version": "4.0.0",
-  "type": "module",
+  "private": true,
+  "workspaces": [
+    "server",
+    "bot"
+  ],
   "scripts": {
-    "dev": "bun --watch server/src/index.ts",
-    "start": "bun server/src/index.ts",
-    "gen:edt": "cd server && bunx prisma generate --schema=./prisma/edt/schema.prisma",
-    "gen:stats": "cd server && bunx prisma generate --schema=./prisma/stats/schema.prisma",
-    "generate": "bun run gen:edt && bun run gen:stats"
-  },
-  "dependencies": {
-    "@prisma/client": "^7.1.0",
-    "discord.js": "^14.14.1",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.0",
-    "unilim": "^2.0.0",
-    "zod": "^3.23.8"
-  },
-  "devDependencies": {
-    "@types/express": "^4.17.21",
-    "@types/node": "^22.10.1",
-    "prisma": "^7.1.0",
-    "typescript": "^5.7.2"
+    "dev:server": "bun --filter server dev",
+    "dev:bot": "bun --filter bot dev",
+    "dev": "bun --filter '*' dev",
+    "start:server": "bun --filter server start",
+    "start:bot": "bun --filter bot start",
+    "start": "bun --filter '*' start",
+    "generate": "bun --filter server generate"
   }
 }
