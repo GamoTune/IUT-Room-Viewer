@@ -4,7 +4,7 @@ import "dotenv/config";
 import { defineConfig, env } from "prisma/config";
 
 export default defineConfig({
-  schema: "prisma/edts/chema.prisma",
+  schema: "prisma/edt/schema.prisma",
   datasource: {
     url: env("EDT_DATABASE_URL"),
   },
