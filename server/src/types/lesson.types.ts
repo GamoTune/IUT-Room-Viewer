@@ -16,6 +16,7 @@ export type {
     student_group as StudentGroup,
     lesson as Lesson,
     lesson_group as LessonGroup,
+    lesson_room as LessonRoom,
     edt_index as EdtIndex,
 } from "../../generated/edt-client/client.js";
 
@@ -27,7 +28,7 @@ export type {
 export const lessonFullInclude = Prisma.validator<Prisma.lessonDefaultArgs>()({
     include: {
         content: true,
-        room: true,
+        lesson_room: { include: { room: true } },
         teacher: true,
         lesson_group: { include: { group: true } },
     },
@@ -36,12 +37,16 @@ export const lessonFullInclude = Prisma.validator<Prisma.lessonDefaultArgs>()({
 // Include pour une salle avec ses cours
 export const roomWithLessonsInclude = Prisma.validator<Prisma.roomDefaultArgs>()({
     include: {
-        lesson: {
+        lesson_room: {
             include: {
-                content: true,
-                room: true,
-                teacher: true,
-                lesson_group: { include: { group: true } },
+                lesson: {
+                    include: {
+                        content: true,
+                        teacher: true,
+                        lesson_group: { include: { group: true } },
+                        lesson_room: { include: { room: true } },
+                    },
+                },
             },
         },
     },
@@ -54,7 +59,7 @@ export const roomWithLessonsInclude = Prisma.validator<Prisma.roomDefaultArgs>()
 /** Un cours avec toutes ses relations */
 export type LessonFull = Prisma.lessonGetPayload<typeof lessonFullInclude>;
 
-/** Une salle avec ses cours */
+/** Une salle avec ses cours via lesson_room */
 export type RoomWithLessons = Prisma.roomGetPayload<typeof roomWithLessonsInclude>;
 
 // ============================================
@@ -67,7 +72,7 @@ export interface LessonResponse {
     type: string;
     startTime: string;
     endTime: string;
-    room: string | null;
+    rooms: string[];  // Tableau de noms de salles (many-to-many)
     teacher: string | null;
     contentCode: string;
     contentName: string;

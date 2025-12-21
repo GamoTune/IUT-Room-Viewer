@@ -28,6 +28,13 @@ export class SyncScheduler {
 
         // Cron expression: toutes les 10 minutes
         this.cronJob = cron.schedule("*/10 * * * *", async () => {
+            // Vérifier si une sync est déjà en cours
+            const status = SyncService.instance.getStatus();
+            if (status.isRunning) {
+                console.log("⏰ [CRON] Sync en cours, on passe ce cycle");
+                return;
+            }
+
             console.log("\n⏰ [CRON] Synchronisation automatique déclenchée");
             try {
                 await SyncService.instance.syncAll();

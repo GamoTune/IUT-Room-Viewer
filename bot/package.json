@@ -3,11 +3,17 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "bun --watch index.js",
-    "start": "bun index.js"
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "build": "bun build src/index.ts --outdir dist"
   },
   "dependencies": {
     "discord.js": "^14.14.1",
     "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "bun-types": "^1.1.0",
+    "typescript": "^5.7.2"
   }
 }

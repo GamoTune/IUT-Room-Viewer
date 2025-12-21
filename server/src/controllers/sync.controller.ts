@@ -48,6 +48,26 @@ export class SyncController {
     }
 
     /**
+     * POST /api/v1/sync/reset
+     * Réinitialise la synchronisation (supprime tous les EDT pour forcer une re-sync)
+     */
+    async resetSync(_req: Request, res: Response): Promise<void> {
+        try {
+            const deletedCount = await SyncService.instance.reset();
+            res.json({
+                success: true,
+                data: { deletedEdts: deletedCount }
+            });
+        } catch (error) {
+            console.error("Erreur lors du reset de la sync:", error);
+            res.status(500).json({
+                success: false,
+                error: "Erreur lors du reset de la synchronisation",
+            });
+        }
+    }
+
+    /**
      * GET /api/v1/sync/status
      * Retourne le statut de la synchronisation
      */

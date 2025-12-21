@@ -1,0 +1,219 @@
+{
+    "success": true,
+    "data": [
+        {
+            "id": 19,
+            "name": ".",
+            "lessons": []
+        },
+        {
+            "id": 7,
+            "name": "103",
+            "lessons": [
+                {
+                    "id": 2818,
+                    "type": "SAE",
+                    "startTime": "2025-12-19T07:00:00.000Z",
+                    "endTime": "2025-12-19T09:00:00.000Z",
+                    "rooms": [
+                        "103"
+                    ],
+                    "teacher": "G3",
+                    "contentCode": "S1.02",
+                    "contentName": "Comparaison d'approches algorithmiques",
+                    "groups": [
+                        {
+                            "mainGroup": 3,
+                            "subGroup": -1
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 8,
+            "name": "104",
+            "lessons": [
+                {
+                    "id": 2814,
+                    "type": "SAE",
+                    "startTime": "2025-12-19T07:00:00.000Z",
+                    "endTime": "2025-12-19T09:00:00.000Z",
+                    "rooms": [
+                        "104"
+                    ],
+                    "teacher": "G1B",
+                    "contentCode": "S1.01",
+                    "contentName": "Implémentation d'un besoin client",
+                    "groups": [
+                        {
+                            "mainGroup": 1,
+                            "subGroup": 2
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 11,
+            "name": "105",
+            "lessons": []
+        },
+        {
+            "id": 18,
+            "name": "108",
+            "lessons": [
+                {
+                    "id": 2811,
+                    "type": "SAE",
+                    "startTime": "2025-12-19T07:00:00.000Z",
+                    "endTime": "2025-12-19T09:00:00.000Z",
+                    "rooms": [
+                        "108"
+                    ],
+                    "teacher": "G1A",
+                    "contentCode": "S1.01",
+                    "contentName": "Implémentation d'un besoin client",
+                    "groups": [
+                        {
+                            "mainGroup": 1,
+                            "subGroup": 1
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 17,
+            "name": "109",
+            "lessons": [
+                {
+                    "id": 2820,
+                    "type": "SAE",
+                    "startTime": "2025-12-19T07:00:00.000Z",
+                    "endTime": "2025-12-19T09:00:00.000Z",
+                    "rooms": [
+                        "109"
+                    ],
+                    "teacher": "G2B",
+                    "contentCode": "S1.03",
+                    "contentName": "Installation d'un poste pour le développement",
+                    "groups": [
+                        {
+                            "mainGroup": 2,
+                            "subGroup": 2
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 9,
+            "name": "111",
+            "lessons": []
+        },
+        {
+            "id": 13,
+            "name": "112",
+            "lessons": []
+        },
+        {
+            "id": 12,
+            "name": "205",
+            "lessons": []
+        },
+        {
+            "id": 16,
+            "name": "206",
+            "lessons": []
+        },
+        {
+            "id": 6,
+            "name": "208",
+            "lessons": []
+        },
+        {
+            "id": 2,
+            "name": "209",
+            "lessons": []
+        },
+        {
+            "id": 20,
+            "name": "AmphA",
+            "lessons": []
+        },
+        {
+            "id": 15,
+            "name": "AmphB",
+            "lessons": []
+        },
+        {
+            "id": 1,
+            "name": "AmphC",
+            "lessons": []
+        },
+        {
+            "id": 14,
+            "name": "R46",
+            "lessons": [
+                {
+                    "id": 3502,
+                    "type": "TD",
+                    "startTime": "2025-12-19T07:30:00.000Z",
+                    "endTime": "2025-12-19T09:00:00.000Z",
+                    "rooms": [
+                        "R46"
+                    ],
+                    "teacher": "G5",
+                    "contentCode": "P3.01",
+                    "contentName": "Portfolio",
+                    "groups": [
+                        {
+                            "mainGroup": 5,
+                            "subGroup": -1
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 5,
+            "name": "R47",
+            "lessons": []
+        },
+        {
+            "id": 4,
+            "name": "R50",
+            "lessons": [
+                {
+                    "id": 3503,
+                    "type": "TD",
+                    "startTime": "2025-12-19T07:30:00.000Z",
+                    "endTime": "2025-12-19T09:00:00.000Z",
+                    "rooms": [
+                        "R50"
+                    ],
+                    "teacher": "G4",
+                    "contentCode": "P3.01",
+                    "contentName": "Portfolio",
+                    "groups": [
+                        {
+                            "mainGroup": 4,
+                            "subGroup": -1
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 10,
+            "name": "R51",
+            "lessons": []
+        },
+        {
+            "id": 3,
+            "name": "R52",
+            "lessons": []
+        }
+    ]
+}

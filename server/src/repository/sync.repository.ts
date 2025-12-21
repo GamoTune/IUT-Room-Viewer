@@ -25,6 +25,16 @@ export class SyncRepository {
     }
 
     /**
+     * Supprime tous les EDT (cascade vers les lessons via onDelete)
+     * Utilisé pour forcer une re-synchronisation complète
+     */
+    async deleteAllEdts() {
+        // Les lessons sont automatiquement supprimées grâce à onDelete: Cascade
+        const result = await prisma.edt_index.deleteMany({});
+        return result.count;
+    }
+
+    /**
      * Crée ou met à jour un index EDT
      */
     async upsertEdt(data: {
@@ -122,14 +132,13 @@ export class SyncRepository {
     // ============================================
 
     /**
-     * Crée ou met à jour un cours (upsert pour gérer les doublons dans les données sources)
+     * Crée ou met à jour un cours (sans roomId, géré via lesson_room)
      */
     async upsertLesson(data: {
         type: string;
         startDatetime: Date;
         endDatetime: Date;
         contentId: number;
-        roomId: number | null;
         teacherId: number | null;
         edtId: number;
     }) {
@@ -140,7 +149,6 @@ export class SyncRepository {
                 start_datetime: data.startDatetime,
                 end_datetime: data.endDatetime,
                 content_id: data.contentId,
-                room_id: data.roomId,
                 teacher_id: data.teacherId,
                 edt_id: data.edtId,
             }
@@ -156,7 +164,6 @@ export class SyncRepository {
                 start_datetime: data.startDatetime,
                 end_datetime: data.endDatetime,
                 content_id: data.contentId,
-                room_id: data.roomId,
                 teacher_id: data.teacherId,
                 edt_id: data.edtId,
             }
@@ -177,28 +184,29 @@ export class SyncRepository {
     }
 
     /**
-     * Supprime tous les cours liés à un EDT (cascade manuelle)
+     * Lie un cours à une salle (many-to-many via lesson_room)
+     */
+    async linkLessonToRoom(lessonId: number, roomId: number) {
+        return prisma.lesson_room.upsert({
+            where: {
+                lesson_id_room_id: { lesson_id: lessonId, room_id: roomId }
+            },
+            update: {},
+            create: { lesson_id: lessonId, room_id: roomId }
+        });
+    }
+
+    /**
+     * Supprime tous les cours liés à un EDT (les cascades gèrent lesson_group et lesson_room)
      */
     async deleteLessonsByEdtId(edtId: number) {
-        // 1. Récupérer les IDs des lessons
-        const lessons = await prisma.lesson.findMany({
-            where: { edt_id: edtId },
-            select: { id: true }
-        });
-        const lessonIds = lessons.map(l => l.id);
-
-        if (lessonIds.length === 0) return 0;
-
-        // 2. Supprimer les liaisons lesson_group
-        await prisma.lesson_group.deleteMany({
-            where: { lesson_id: { in: lessonIds } }
-        });
-
-        // 3. Supprimer les lessons
+        // Avec onDelete: Cascade sur lesson_group et lesson_room,
+        // la suppression des lessons supprimera automatiquement les liaisons
         const result = await prisma.lesson.deleteMany({
-            where: { id: { in: lessonIds } }
+            where: { edt_id: edtId }
         });
 
         return result.count;
     }
 }
+

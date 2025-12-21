@@ -38,17 +38,22 @@ export class RoomService {
 
     /**
      * Transforme une salle avec ses cours en format de réponse API
+     * Utilise lesson_room pour accéder aux cours (many-to-many)
      */
     private transformRoomToResponse(room: RoomWithLessons): RoomWithLessonsResponse {
+        // Extraire les cours depuis lesson_room
+        const lessons = room.lesson_room.map(lr => lr.lesson);
+
         return {
             id: room.id,
             name: room.name,
-            lessons: room.lesson.map(lesson => this.transformLessonToResponse(lesson)),
+            lessons: lessons.map(lesson => this.transformLessonToResponse(lesson)),
         };
     }
 
     /**
      * Transforme un cours complet en format de réponse API
+     * rooms est maintenant un tableau de noms de salles
      */
     private transformLessonToResponse(lesson: LessonFull): LessonResponse {
         return {
@@ -56,7 +61,7 @@ export class RoomService {
             type: lesson.type,
             startTime: lesson.start_datetime.toISOString(),
             endTime: lesson.end_datetime.toISOString(),
-            room: lesson.room?.name ?? null,
+            rooms: lesson.lesson_room.map(lr => lr.room.name),
             teacher: lesson.teacher?.name ?? null,
             contentCode: lesson.content.code,
             contentName: lesson.content.name,
@@ -67,3 +72,4 @@ export class RoomService {
         };
     }
 }
+

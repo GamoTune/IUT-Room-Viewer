@@ -42,6 +42,23 @@ export class SyncService {
     }
 
     /**
+     * Réinitialise la synchronisation : supprime tous les EDT pour forcer une re-sync complète
+     */
+    async reset(): Promise<number> {
+        // Supprimer tous les EDT (cascade vers lessons)
+        const deletedCount = await SyncRepository.instance.deleteAllEdts();
+
+        // Réinitialiser le statut en mémoire
+        this.status = {
+            isRunning: false,
+            lastSync: null,
+        };
+
+        console.log(`🗑️ Reset: ${deletedCount} EDT supprimés`);
+        return deletedCount;
+    }
+
+    /**
      * Synchronise tous les emplois du temps (A1, A2, A3)
      */
     async syncAll(): Promise<SyncSummary> {
@@ -195,23 +212,21 @@ export class SyncService {
             teacherId = teacher.id;
         }
 
-        // Upsert de la salle (si présente)
-        let roomId: number | null = null;
-        if (formatted.roomName) {
-            const room = await SyncRepository.instance.upsertRoom(formatted.roomName);
-            roomId = room.id;
-        }
-
-        // Créer le cours
+        // Créer le cours (sans roomId, géré via lesson_room)
         const lessonRecord = await SyncRepository.instance.upsertLesson({
             type: formatted.type,
             startDatetime: formatted.startDatetime,
             endDatetime: formatted.endDatetime,
             contentId: content.id,
-            roomId,
             teacherId,
             edtId,
         });
+
+        // Lier le cours aux salles (many-to-many via lesson_room)
+        for (const roomName of formatted.roomNames) {
+            const room = await SyncRepository.instance.upsertRoom(roomName);
+            await SyncRepository.instance.linkLessonToRoom(lessonRecord.id, room.id);
+        }
 
         // Créer le groupe et le lier au cours
         const group = await SyncRepository.instance.upsertStudentGroup(
@@ -234,12 +249,12 @@ export class SyncService {
         let contentCode = "N/A";
         let contentName = "N/A";
         let teacherName: string | null = null;
-        let roomName: string | null = null;
+        let roomNames: string[] = [];
 
         if ("content" in lesson) {
             const content = lesson.content;
             teacherName = content.teacher || null;
-            roomName = this.formatRoomName(content.room || null);
+            roomNames = this.formatRoomNames(content.room || null);
 
             if ("type" in content) {
                 contentCode = content.type;
@@ -272,28 +287,52 @@ export class SyncService {
             contentCode,
             contentName,
             teacherName,
-            roomName,
+            roomNames,
             mainGroup,
             subGroup,
         };
     }
 
     /**
-     * Formate le nom de la salle (normalisation des amphithéâtres)
+     * Formate le nom de la salle (normalisation + gestion multi-salles)
+     * Gère le format "111-2" → ["111", "112"] (salle 111 et fin 2 = 112)
      */
-    private formatRoomName(room: string | null): string | null {
-        if (!room) return null;
+    private formatRoomNames(room: string | null): string[] {
+        if (!room) return [];
 
-        // Gérer les ranges de salles (ex: "111-112" → on prend juste la première)
+        // Gérer les ranges de salles (ex: "111-2" → "111" et "112")
         if (room.includes("-")) {
-            room = room.split("-")[0];
+            const parts = room.split("-");
+            const roomBase = parts[0];
+            const roomSuffix = parts[1];
+
+            // Calculer la deuxième salle (ex: 111 + 1 = 112 si suffix est "2")
+            const baseNum = parseInt(roomBase);
+            const secondRoom = (baseNum + 1).toString();
+
+            // Normaliser les deux salles
+            return [
+                this.normalizeRoomName(roomBase),
+                this.normalizeRoomName(secondRoom),
+            ].filter(r => r !== null) as string[];
         }
+
+        // Salle unique
+        const normalized = this.normalizeRoomName(room);
+        return normalized ? [normalized] : [];
+    }
+
+    /**
+     * Normalise un nom de salle individuel (amphithéâtres, etc.)
+     */
+    private normalizeRoomName(room: string): string | null {
+        if (!room) return null;
 
         // Normaliser les amphithéâtres
         if (room.includes("A") || room.includes("Amp")) {
             if (room.includes("Amp")) {
                 return "Amph" + room.charAt(3);
-            } else if (room.length >= 2) {
+            } else if (room.length >= 2 && room.charAt(0) === "A") {
                 return "Amph" + room.charAt(1);
             }
         }
@@ -301,3 +340,4 @@ export class SyncService {
         return room;
     }
 }
+

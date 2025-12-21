@@ -41,7 +41,7 @@ export interface FormattedLesson {
     contentCode: string;
     contentName: string;
     teacherName: string | null;
-    roomName: string | null;
+    roomNames: string[];  // Tableau de noms de salles (many-to-many)
     mainGroup: number;
     subGroup: number;
 }

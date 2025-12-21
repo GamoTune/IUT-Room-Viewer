@@ -5,7 +5,6 @@
 
 import prisma from "../lib/prismaEDT.js";
 import type { Room, RoomWithLessons } from "../types/index.js";
-import { lessonFullInclude } from "../types/index.js";
 
 /**
  * Repository pour les opérations sur les salles
@@ -33,17 +32,28 @@ export class RoomRepository {
 
     /**
      * Récupère toutes les salles avec leurs cours sur une période donnée
+     * Utilise la table lesson_room pour le many-to-many
      */
     async findAllRoomsWithLessonsInTimeRange(startTime: Date, endTime: Date): Promise<RoomWithLessons[]> {
         return prisma.room.findMany({
             include: {
-                lesson: {
+                lesson_room: {
                     where: {
-                        start_datetime: { lt: endTime },
-                        end_datetime: { gt: startTime },
+                        lesson: {
+                            start_datetime: { lt: endTime },
+                            end_datetime: { gt: startTime },
+                        },
                     },
-                    ...lessonFullInclude,
-                    orderBy: { start_datetime: "asc" },
+                    include: {
+                        lesson: {
+                            include: {
+                                content: true,
+                                teacher: true,
+                                lesson_group: { include: { group: true } },
+                                lesson_room: { include: { room: true } },
+                            },
+                        },
+                    },
                 },
             },
             orderBy: { name: "asc" },
