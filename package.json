@@ -1,28 +1,18 @@
 {
   "name": "iut-room-viewer",
-  "version": "3.0.0",
+  "version": "4.0.0",
+  "private": true,
+  "workspaces": [
+    "server",
+    "bot"
+  ],
   "scripts": {
-    "start": "node index.js",
-    "//": "--- Le script magique ---",
-    "gen:edt": "prisma generate --schema=./prisma/edt/schema.prisma",
-    "gen:stats": "prisma generate --schema=./prisma/stats/schema.prisma",
-    "generate": "npm run gen:edt && npm run gen:stats",
-    "update:prisma:edt": "npx prisma db pull --schema=./prisma/edt/schema.prisma",
-    "update:prisma:stats": "npx prisma db pull --schema=./prisma/stats/schema.prisma",
-    "update:prisma": "npm run update:prisma:edt && npm run update:prisma:stats && npm run generate",
-    "postinstall": "npm run generate",
-    "push:prisma:edt": "npx prisma db push --schema=./prisma/edt/schema.prisma"
-  },
-  "dependencies": {
-    "@prisma/client": "^6.19.0",
-    "discord.js": "^14.14.1",
-    "dotenv": "^16.4.7",
-    "edt-iut-info-limoges": "^1.7.0",
-    "moment": "^2.30.1",
-    "mysql2": "^3.14.1",
-    "terminal-kit": "^3.1.2"
-  },
-  "devDependencies": {
-    "prisma": "^6.19.0"
+    "dev:server": "bun --filter server dev",
+    "dev:bot": "bun --filter bot dev",
+    "dev": "bun --filter '*' dev",
+    "start:server": "bun --filter server start",
+    "start:bot": "bun --filter bot start",
+    "start": "bun --filter '*' start",
+    "generate": "bun --filter server generate"
   }
 }
