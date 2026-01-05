@@ -1,159 +1,255 @@
 # 🏫 IUT Room Viewer
 
+> Visualisez en temps réel la disponibilité des salles du département informatique de l'IUT du Limousin.
+
+[![Version](https://img.shields.io/badge/version-4.0.0-blue.svg)](https://github.com/GamoTune/IUT-Room-Viewer)
+[![Bun](https://img.shields.io/badge/Bun-1.0+-black.svg)](https://bun.sh)
+[![Discord.js](https://img.shields.io/badge/Discord.js-v14-5865F2.svg)](https://discord.js.org)
+[![Prisma](https://img.shields.io/badge/Prisma-7.x-2D3748.svg)](https://prisma.io)
+
+---
+
 ## 📋 Description
 
-IUT Room Viewer est une application Discord permettant de visualiser en temps réel le status des salles du département informatique de l'IUT du Limousin. Le projet combine un système de récupération automatique des données d'emploi du temps avec un bot Discord pour consulter ces informations.
+IUT Room Viewer est une application complète combinant :
+- **Une API REST** pour récupérer les données de disponibilité des salles
+- **Un bot Discord** pour consulter ces informations facilement
+- **Un système de synchronisation automatique** des emplois du temps
 
-## ✨ Fonctionnalités
-
-### 🔄 Système de données en temps réel
-- **Récupération automatique** des emplois du temps avec le module [edt-iut-info-limoges](https://www.npmjs.com/package/edt-iut-info-limoges)
-- **Base de données** avec Prisma ORM et MariaDB pour un stockage structuré
-- **Mise à jour périodique** des données pour garantir leur fraîcheur (toutes les heures)
-- **Gestion intelligente des salles** (amphithéâtres, salles à plages, etc.)
-
-### 🤖 Bot Discord
-- **Commandes slash** modernes et pratiques
-- **Visualisation en temps réel** de l'état des salles
-- **Recherche par plage horaire** personnalisable
-- **Organisation par étages** pour une navigation facilitée
-- **Intégration serveur ou client** Discord
-
-### 🏗️ Architecture technique
-- **Serveur de données** (`server/`) : Récupération et traitement des emplois du temps
-- **Bot Discord** (`bot/`) : Interface utilisateur et commandes
-- **Base de données relationnelle** : Stockage optimisé avec relations (professeurs, salles, matières, groupes)
-- **Configuration PM2** pour la production
+---
 
 ## 🚀 Utilisation rapide
 
-### Discord
-- **Bot pour serveurs** : [Ajouter Salles IUT](https://discord.com/oauth2/authorize?client_id=1331626843257966613&permissions=2147485696&integration_type=0&scope=bot)
-- **Intégration utilisateur** : [IUT-Room-viewer](https://discord.com/oauth2/authorize?client_id=1331626843257966613)
+### 🤖 Bot Discord
 
-### Commandes disponibles
-- `/salles_maintenant` - État actuel de toutes les salles
-- `/salles_entre` - État des salles dans une plage horaire
+| Type | Lien |
+|------|------|
+| **Bot pour serveurs** | [Ajouter Salles IUT](https://discord.com/oauth2/authorize?client_id=1331626843257966613&permissions=2147485696&integration_type=0&scope=bot) |
+| **Intégration utilisateur** | [IUT-Room-viewer](https://discord.com/oauth2/authorize?client_id=1331626843257966613) |
 
-## 🛠️ Installation et configuration
+### 💬 Commandes Discord
+
+| Commande | Description |
+|----------|-------------|
+| `/help` | Affiche l'aide sur les commandes disponibles |
+| `/salles_maintenant` | Affiche l'état actuel de toutes les salles |
+| `/salles_entre` | Affiche l'état des salles entre deux horaires |
+
+#### Options de `/salles_entre`
+
+| Option | Type | Requis | Description |
+|--------|------|--------|-------------|
+| `heure_début` | Entier | ✅ | Heure de début |
+| `heure_fin` | Entier | ✅ | Heure de fin |
+| `minute_debut` | Entier | ❌ | Minute de début (défaut: 0) |
+| `minute_fin` | Entier | ❌ | Minute de fin (défaut: 0) |
+| `jour` | Entier | ❌ | Jour (défaut: aujourd'hui) |
+| `mois` | Entier | ❌ | Mois (défaut: mois actuel) |
+| `année` | Entier | ❌ | Année (défaut: année actuelle) |
+
+---
+
+## 🌐 API REST
+
+L'API REST permet d'accéder aux données des salles de manière programmatique.
+
+### Endpoints disponibles
+
+#### 📍 Informations générales
+
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| `GET` | `/` | Informations sur l'API (version, endpoints) |
+| `GET` | `/health` | Vérification de l'état du serveur |
+
+#### 🏠 Salles
+
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| `GET` | `/api/v1/rooms` | Liste toutes les salles |
+| `GET` | `/api/v1/rooms/availability` | Disponibilité des salles sur une plage horaire |
+
+**Paramètres de `/api/v1/rooms/availability` :**
+
+| Paramètre | Type | Requis | Description |
+|-----------|------|--------|-------------|
+| `startTime` | ISO 8601 | ✅ | Date/heure de début |
+| `endTime` | ISO 8601 | ✅ | Date/heure de fin |
+
+**Exemple :**
+```bash
+GET /api/v1/rooms/availability?startTime=2025-01-04T08:00:00&endTime=2025-01-04T12:00:00
+```
+
+#### 🔄 Synchronisation
+
+| Méthode | Endpoint | Auth | Description |
+|---------|----------|------|-------------|
+| `GET` | `/api/v1/sync/status` | ❌ | Statut de la dernière synchronisation |
+| `POST` | `/api/v1/sync/trigger` | 🔐 | Déclenche une synchronisation manuelle |
+| `POST` | `/api/v1/sync/reset` | 🔐 | Réinitialise et resynchronise les données |
+
+> 🔐 Les routes protégées nécessitent une clé API via le header `X-API-Key`
+
+### Format de réponse
+
+```json
+{
+  "success": true,
+  "data": [...]
+}
+```
+
+En cas d'erreur :
+```json
+{
+  "success": false,
+  "error": "Message d'erreur"
+}
+```
+
+---
+
+## 🛠️ Installation
 
 ### Prérequis
-- [Node.js](https://nodejs.org/) (v22+ recommandé)
-- [MySQL](https://www.mysql.com/) ou MariaDB
+
+- [Bun](https://bun.sh) (v1.0+)
+- [MariaDB](https://mariadb.org/) ou MySQL
 - Compte développeur Discord
 
 ### Installation
-1. **Clonez le repository**
-   ```bash
-   git clone https://github.com/GamoTune/IUT-Room-Viewer.git
-   cd IUT-Room-Viewer
-   ```
 
-2. **Installez les dépendances**
-   ```bash
-   npm install
-   ```
+```bash
+# Cloner le repository
+git clone https://github.com/GamoTune/IUT-Room-Viewer.git
+cd IUT-Room-Viewer
 
-3. **Configuration de la base de données**
-   ```bash
-   # Générer le client Prisma
-   npx prisma generate
-   
-   # Appliquer les migrations
-   npx prisma db push
-   ```
+# Installer les dépendances (workspaces)
+bun install
+
+# Générer les clients Prisma
+bun run generate
+```
 
 ### Configuration
 
-1. **Créez votre application Discord**
-   - Rendez-vous sur le [portail développeur Discord](https://discord.com/developers/applications)
-   - Créez une nouvelle application et récupérez le token + client ID
+Créez un fichier `.env` dans chaque sous-projet :
 
-2. **Variables d'environnement**
-   
-   Créez un fichier `.env` à la racine :
-   ```env
-   # Discord
-   TOKEN="votre-token-discord-bot"
-   CLIENT_ID="id-de-votre-application-discord"
-   VERSION="X.X.X"
-   
-   # Base de données
-   DATABASE_URL="mysql://utilisateur:motdepasse@localhost:3306/iut_room_viewer"
-   ```
+#### `server/.env`
+```env
+# Base de données EDT
+DATABASE_URL_EDT="mysql://user:password@localhost:3306/iut_edt"
+
+# Base de données Stats
+DATABASE_URL_STATS="mysql://user:password@localhost:3306/iut_stats"
+
+# API
+PORT=3000
+API_KEY="votre-cle-api-secrete"
+VERSION="4.0.0"
+```
+
+#### `bot/.env`
+```env
+TOKEN="votre-token-discord-bot"
+CLIENT_ID="id-de-votre-application-discord"
+VERSION="4.0.0"
+API_URL="http://localhost:3000"
+```
 
 ### Lancement
 
 #### Développement
 ```bash
-# Serveur de données
-node server/app.js
+# Lancer les deux services en mode watch
+bun run dev
 
-# Bot Discord (dans un autre terminal)
-node bot/index.js
+# Ou séparément
+bun run dev:server
+bun run dev:bot
 ```
 
-#### Production avec PM2
+#### Production
 ```bash
-# Installer PM2 globalement
-npm install -g pm2
-
 # Lancer les deux services
-pm2 start ecosystem.config.js
+bun run start
 
-# Monitoring
-pm2 status
-pm2 logs
+# Ou avec PM2
+pm2 start ecosystem.config.js
 ```
+
+---
 
 ## 📁 Structure du projet
 
 ```
 IUT-Room-Viewer/
-├── 📂 bot/                    # Bot Discord
-│   ├── 📂 commands/           # Commandes slash
-│   ├── 📂 events/            # Gestionnaires d'événements
-│   ├── 📄 ask.js             # Requêtes base de données
-│   ├── 📄 create_fields.js   # Formatage pour Discord
-│   └── 📄 index.js           # Point d'entrée du bot
-├── 📂 server/                 # Serveur de données
-│   ├── 📄 app.js             # Serveur principal
-│   └── 📄 fetch_and_save.js  # Récupération et sauvegarde
-├── 📂 prisma/                 # Schéma base de données
-├── 📄 ecosystem.config.js     # Configuration PM2
-├── 📄 package.json           # Dépendances
-└── 📄 .env.example          # Exemple de configuration
+├── 📂 bot/                      # Bot Discord (TypeScript)
+│   ├── 📂 src/
+│   │   ├── 📂 commands/         # Commandes slash
+│   │   ├── 📂 events/           # Gestionnaires d'événements
+│   │   ├── 📂 services/         # Services (API, logging)
+│   │   ├── 📂 types/            # Types TypeScript
+│   │   ├── 📂 utils/            # Utilitaires
+│   │   └── 📄 index.ts          # Point d'entrée
+│   └── 📄 package.json
+│
+├── 📂 server/                   # Serveur API (TypeScript)
+│   ├── 📂 src/
+│   │   ├── 📂 api/              # Configuration Express
+│   │   │   └── 📂 routes/       # Définition des routes
+│   │   ├── 📂 controllers/      # Contrôleurs HTTP
+│   │   ├── 📂 services/         # Logique métier
+│   │   ├── 📂 repository/       # Accès aux données
+│   │   ├── 📂 middleware/       # Middlewares (auth, etc.)
+│   │   ├── 📂 sync/             # Synchronisation EDT
+│   │   ├── 📂 types/            # Types TypeScript
+│   │   └── 📄 index.ts          # Point d'entrée
+│   ├── 📂 prisma/               # Schémas de base de données
+│   │   ├── 📂 edt/              # Base EDT
+│   │   └── 📂 stats/            # Base Stats
+│   └── 📄 package.json
+│
+├── 📄 ecosystem.config.js       # Configuration PM2
+└── 📄 package.json              # Workspace root
 ```
 
-## 🔧 Technologies utilisées
+---
 
-- **Backend** : Node.js, Prisma ORM
-- **Base de données** : MariaDB/MySQL
-- **Bot** : Discord.js v14
-- **API externe** : edt-iut-info-limoges
-- **Production** : PM2, dotenv
-- **Utilitaires** : moment.js pour les dates
+## 🔧 Technologies
 
-## 🎯 Fonctionnalités avancées
+| Catégorie | Technologies |
+|-----------|--------------|
+| **Runtime** | Bun |
+| **Langage** | TypeScript |
+| **API** | Express |
+| **Base de données** | MariaDB/MySQL, Prisma ORM |
+| **Bot** | Discord.js v14 |
+| **Données EDT** | [unilim](https://www.npmjs.com/package/unilim) |
+| **Planification** | node-cron |
+| **Production** | PM2 |
 
-### Gestion intelligente des salles
-- **Détection automatique** des amphithéâtres (AmphA, AmphB, AmphC)
-- **Gestion des plages de salles** (ex: "111-112" → salles 111 et 112)
-- **Organisation par étages** dans l'affichage Discord
+---
 
-### Système de groupes
-- **Support des années** : A1, A2, A3
-- **Gestion des groupes** : G1-G8 avec sous-groupes A/B
-- **Affichage contextualisé** des cours par groupe
+## ✨ Fonctionnalités
 
-### Base de données optimisée
-- **Relations normalisées** (professeurs, salles, matières, groupes)
-- **Upserts intelligents** pour éviter les doublons
-- **Requêtes optimisées** pour les performances
+- 🔄 **Synchronisation automatique** des emplois du temps (toutes les heures)
+- 🏢 **Gestion intelligente des salles** (amphithéâtres, plages de salles)
+- 📊 **Organisation par étages** dans l'affichage Discord
+- 🎯 **API REST complète** pour intégrations tierces
+- 📈 **Statistiques d'utilisation** (base de données dédiée)
+
+---
 
 ## 🤝 Contribution
 
-Les contributions sont les bienvenues ! Que ce soit pour signaler des bugs, proposer des améliorations ou ajouter des fonctionnalités.
+Les contributions sont les bienvenues ! N'hésitez pas à :
+- 🐛 Signaler des bugs
+- 💡 Proposer des améliorations
+- 🔧 Soumettre des pull requests
+
+---
 
 ## 📄 Licence
 
@@ -161,4 +257,6 @@ Ce projet est sous licence libre.
 
 ---
 
-*Développé avec ❤️ pour les étudiants d'informatique de l'IUT Limousin*
+<p align="center">
+  <i>Développé avec ❤️ pour les étudiants d'informatique de l'IUT Limousin</i>
+</p>

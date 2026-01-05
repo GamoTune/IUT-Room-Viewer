@@ -6,8 +6,9 @@
 import express from "express";
 
 // Importer les routes
-import { roomRoutes } from "./routes/rooms.routes.js";
-import { syncRoutes } from "./routes/sync.routes.js";
+import { roomRoutes } from "./routes/rooms.route.js";
+import { syncRoutes } from "./routes/sync.route.js";
+import { scheduleRoutes } from "./routes/schedule.route.js";
 
 // Créer l'application Express
 const app = express();
@@ -60,6 +61,9 @@ app.use("/api/v1/rooms", roomRoutes);
 
 // Monter les routes de synchronisation
 app.use("/api/v1/sync", syncRoutes);
+
+// Monter les routes du planning
+app.use("/api/v1/schedule", scheduleRoutes);
 
 // ============================================
 // Gestion des erreurs (doit être à la fin)
