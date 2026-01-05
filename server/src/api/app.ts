@@ -39,6 +39,7 @@ app.use((_req, res, next) => {
 app.get("/health", (_req, res) => {
     res.json({
         status: "ok",
+        uptime: process.uptime(),
         timestamp: new Date().toISOString()
     });
 });
@@ -52,6 +53,7 @@ app.get("/", (_req, res) => {
             health: "/health",
             rooms: "/api/v1/rooms",
             sync: "/api/v1/sync",
+            schedule: "/api/v1/schedule",
         },
     });
 });
