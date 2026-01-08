@@ -9,6 +9,7 @@ import express from "express";
 import { roomRoutes } from "./routes/rooms.route.js";
 import { syncRoutes } from "./routes/sync.route.js";
 import { scheduleRoutes } from "./routes/schedule.route.js";
+import { statsRoutes } from "./routes/stats.route.js";
 
 // Créer l'application Express
 const app = express();
@@ -54,6 +55,7 @@ app.get("/", (_req, res) => {
             rooms: "/api/v1/rooms",
             sync: "/api/v1/sync",
             schedule: "/api/v1/schedule",
+            stats: "/api/v1/stats",
         },
     });
 });
@@ -66,6 +68,9 @@ app.use("/api/v1/sync", syncRoutes);
 
 // Monter les routes du planning
 app.use("/api/v1/schedule", scheduleRoutes);
+
+// Monter les routes des statistiques
+app.use("/api/v1/stats", statsRoutes);
 
 // ============================================
 // Gestion des erreurs (doit être à la fin)
