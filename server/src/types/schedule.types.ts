@@ -11,8 +11,7 @@ export interface Course {
     type?: 'CM' | 'TD' | 'TP' | 'DS' | 'SAE' | 'Autre';
 }
 export interface ScheduleQuery {
-    group: string;      // e.g., "A3", "G5"
-    year: string;       // e.g., "BUT1", "BUT2"
+    group: string;      // e.g., "G3", "G5" - Le numéro déduit l'année automatiquement
     tp?: string;        // e.g., "A", "B"
     date?: string;      // ISO date, default: today
 }

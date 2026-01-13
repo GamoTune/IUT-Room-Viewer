@@ -6,10 +6,23 @@ import { getLessonsByGroup, parseGroupName, type ScheduleFilter } from "../repos
 import type { Course, ScheduleQuery, ScheduleResponse } from "../types/schedule.types.js";
 
 /**
+ * Déduit l'année de BUT à partir du numéro de groupe
+ * G1, G2, G3 -> BUT1
+ * G4, G5 -> BUT2
+ * G7, G8 -> BUT3
+ */
+function getYearFromGroup(mainGroup: number): string {
+    if (mainGroup >= 1 && mainGroup <= 3) return "BUT1";
+    if (mainGroup >= 4 && mainGroup <= 5) return "BUT2";
+    if (mainGroup >= 7 && mainGroup <= 8) return "BUT3";
+    return "BUT1"; // Par défaut
+}
+
+/**
  * Récupère l'emploi du temps d'un groupe pour une date
  */
 export async function getScheduleForGroup(query: ScheduleQuery): Promise<ScheduleResponse> {
-    const { group, year, tp, date } = query;
+    const { group, tp, date } = query;
 
     // Calculer les dates de début et fin de la journée
     const targetDate = date ? new Date(date) : new Date();
@@ -21,6 +34,9 @@ export async function getScheduleForGroup(query: ScheduleQuery): Promise<Schedul
 
     // Convertir le nom du groupe en identifiants numériques
     const { mainGroup, subGroup } = parseGroupName(group, tp);
+
+    // Déduire l'année à partir du groupe
+    const year = getYearFromGroup(mainGroup);
 
     // Récupérer les leçons
     const filter: ScheduleFilter = {

@@ -4,12 +4,16 @@
 // ============================================
 
 import express from "express";
+import swaggerUi from "swagger-ui-express";
 
 // Importer les routes
 import { roomRoutes } from "./routes/rooms.route.js";
 import { syncRoutes } from "./routes/sync.route.js";
 import { scheduleRoutes } from "./routes/schedule.route.js";
 import { statsRoutes } from "./routes/stats.route.js";
+
+// Importer la documentation Swagger
+import { swaggerDocument } from "./swagger.js";
 
 // Créer l'application Express
 const app = express();
@@ -45,13 +49,21 @@ app.get("/health", (_req, res) => {
     });
 });
 
+// Documentation Swagger (routes publiques uniquement)
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: "IUT Room Viewer API - Documentation",
+}));
+
 // Page d'accueil de l'API
 app.get("/", (_req, res) => {
     res.json({
         name: "IUT Room Viewer API",
         version: process.env.VERSION,
+        documentation: "/docs",
         endpoints: {
             health: "/health",
+            docs: "/docs",
             rooms: "/api/v1/rooms",
             sync: "/api/v1/sync",
             schedule: "/api/v1/schedule",

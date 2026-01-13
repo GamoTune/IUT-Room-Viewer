@@ -10,7 +10,7 @@ import { getScheduleForGroup } from '../services/schedule.service.js';
  */
 export async function getSchedule(req: Request, res: Response) {
     try {
-        const { group, year, tp, date } = req.query;
+        const { group, tp, date } = req.query;
 
         // Validation
         if (!group || typeof group !== 'string') {
@@ -20,17 +20,9 @@ export async function getSchedule(req: Request, res: Response) {
             });
         }
 
-        if (!year || typeof year !== 'string') {
-            return res.status(400).json({
-                success: false,
-                error: 'Le paramètre "year" est requis',
-            });
-        }
-
         // Récupérer l'emploi du temps
         const schedule = await getScheduleForGroup({
             group,
-            year,
             tp: typeof tp === 'string' ? tp : undefined,
             date: typeof date === 'string' ? date : undefined,
         });

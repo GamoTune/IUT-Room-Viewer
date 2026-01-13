@@ -58,14 +58,19 @@ export async function getLessonsByGroup(filter: ScheduleFilter) {
 /**
  * Construit les conditions de filtre pour les groupes
  * - mainGroup: le groupe principal (1-8)
- * - subGroup: 0 = tous, 1 = A, 2 = B
+ * - subGroup: -1 = tous (CM/TD), 0 = groupe entier, 1 = A, 2 = B
+ * 
+ * Quand un sous-groupe est spécifié (A ou B), on inclut aussi les cours
+ * pour tout le groupe (sub_group=-1 ou 0) comme les TD/CM
  */
 function buildGroupConditions(mainGroup: number, subGroup?: number) {
     if (subGroup !== undefined && subGroup > 0) {
-        // Filtre exact sur main_group ET sub_group
+        // Inclure les cours du sous-groupe spécifié ET les cours pour tout le groupe
         return {
             main_group: mainGroup,
-            sub_group: subGroup,
+            sub_group: {
+                in: [-1, 0, subGroup], // -1 et 0 = tout le groupe, subGroup = TP spécifique
+            },
         };
     }
 
