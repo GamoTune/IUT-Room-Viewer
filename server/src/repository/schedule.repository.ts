@@ -7,6 +7,7 @@ import prisma from "../lib/prismaEDT.js";
 export interface ScheduleFilter {
     mainGroup: number;  // Groupe principal (1-8)
     subGroup?: number;  // Sous-groupe (0=tous, 1=A, 2=B)
+    yearMainGroup: number; // Identifiant de l'année (-1=BUT1, -2=BUT2, -3=BUT3)
     startDate: Date;
     endDate: Date;
 }
@@ -15,10 +16,10 @@ export interface ScheduleFilter {
  * Récupère les leçons pour un groupe sur une période
  */
 export async function getLessonsByGroup(filter: ScheduleFilter) {
-    const { mainGroup, subGroup, startDate, endDate } = filter;
+    const { mainGroup, subGroup, yearMainGroup, startDate, endDate } = filter;
 
     // Construire la condition pour les groupes
-    const groupConditions = buildGroupConditions(mainGroup, subGroup);
+    const groupConditions = buildGroupConditions(mainGroup, subGroup, yearMainGroup);
 
     const lessons = await prisma.lesson.findMany({
         where: {
@@ -59,24 +60,36 @@ export async function getLessonsByGroup(filter: ScheduleFilter) {
  * Construit les conditions de filtre pour les groupes
  * - mainGroup: le groupe principal (1-8)
  * - subGroup: -1 = tous (CM/TD), 0 = groupe entier, 1 = A, 2 = B
+ * - yearMainGroup: identifiant de l'année (-1=BUT1, -2=BUT2, -3=BUT3)
  * 
  * Quand un sous-groupe est spécifié (A ou B), on inclut aussi les cours
  * pour tout le groupe (sub_group=-1 ou 0) comme les TD/CM
+ * On inclut également les cours de l'année entière (mainGroup négatif)
  */
-function buildGroupConditions(mainGroup: number, subGroup?: number) {
+function buildGroupConditions(mainGroup: number, subGroup: number | undefined, yearMainGroup: number) {
     if (subGroup !== undefined && subGroup > 0) {
-        // Inclure les cours du sous-groupe spécifié ET les cours pour tout le groupe
+        // Inclure les cours du sous-groupe spécifié ET les cours pour tout le groupe ET les cours de l'année
         return {
-            main_group: mainGroup,
-            sub_group: {
-                in: [-1, 0, subGroup], // -1 et 0 = tout le groupe, subGroup = TP spécifique
-            },
+            OR: [
+                {
+                    main_group: mainGroup,
+                    sub_group: {
+                        in: [-1, 0, subGroup], // -1 et 0 = tout le groupe, subGroup = TP spécifique
+                    },
+                },
+                {
+                    main_group: yearMainGroup, // Cours de l'année entière (CM)
+                },
+            ],
         };
     }
 
-    // Filtre sur main_group uniquement (tous les sous-groupes)
+    // Filtre sur main_group uniquement (tous les sous-groupes) OU cours de l'année
     return {
-        main_group: mainGroup,
+        OR: [
+            { main_group: mainGroup },
+            { main_group: yearMainGroup },
+        ],
     };
 }
 

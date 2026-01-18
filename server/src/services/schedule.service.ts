@@ -19,6 +19,17 @@ function getYearFromGroup(mainGroup: number): string {
 }
 
 /**
+ * Convertit une année BUT en identifiant mainGroup négatif
+ * BUT1 -> -1, BUT2 -> -2, BUT3 -> -3
+ */
+function getYearMainGroup(year: string): number {
+    if (year === "BUT1") return -1;
+    if (year === "BUT2") return -2;
+    if (year === "BUT3") return -3;
+    return -1; // Par défaut
+}
+
+/**
  * Récupère l'emploi du temps d'un groupe pour une date
  */
 export async function getScheduleForGroup(query: ScheduleQuery): Promise<ScheduleResponse> {
@@ -37,11 +48,13 @@ export async function getScheduleForGroup(query: ScheduleQuery): Promise<Schedul
 
     // Déduire l'année à partir du groupe
     const year = getYearFromGroup(mainGroup);
+    const yearMainGroup = getYearMainGroup(year);
 
     // Récupérer les leçons
     const filter: ScheduleFilter = {
         mainGroup,
         subGroup,
+        yearMainGroup,
         startDate,
         endDate,
     };
