@@ -4,8 +4,8 @@
 // ============================================
 
 import { Router } from "express";
-import { requireApiKey } from "../../middleware/auth.middleware.js";
-import { logCommandController } from "../../controllers/stats.controller.js";
+import { requireApiKey } from "../../../middleware/auth.middleware.js";
+import { logCommandController } from "../../../controllers/stats.controller.js";
 
 const router = Router();
 

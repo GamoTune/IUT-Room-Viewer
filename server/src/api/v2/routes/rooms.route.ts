@@ -1,12 +1,10 @@
 // ============================================
-// 📁 src/api/routes/schedule.route.ts
+// 📁 src/api/v1/routes/rooms.routes.ts
 // Routes Express pour les salles
 // ============================================
 
 import { Router } from "express";
 
-// On importe le contrôleur
-import { getSchedule } from '../../controllers/schedule.controller.js';
 
 // Créer un routeur Express
 const router = Router();
@@ -15,7 +13,11 @@ const router = Router();
 // Définition des routes
 // ============================================
 
-// Schedule routes
-router.get('/', getSchedule);
+// GET /api/v2/rooms - Liste toutes les salles
+router.get("/", (req, res) => {});
 
-export { router as scheduleRoutes };
+// GET /api/v2/rooms/status - Statut des salles
+router.get("/status", (req, res) => {});
+
+// Exporter le routeur
+export { router as roomRoutes };

@@ -6,11 +6,19 @@
 import express from "express";
 import swaggerUi from "swagger-ui-express";
 
-// Importer les routes
-import { roomRoutes } from "./routes/rooms.route.js";
-import { syncRoutes } from "./routes/sync.route.js";
-import { scheduleRoutes } from "./routes/schedule.route.js";
-import { statsRoutes } from "./routes/stats.route.js";
+// Import des routes v1
+import { roomRoutes } from "./v1/index.js";
+import { syncRoutes } from "./v1/index.js";
+import { scheduleRoutes } from "./v1/index.js";
+import { statsRoutes } from "./v1/index.js";
+
+
+// Import des routes v2
+// Importer les routes V2
+import { roomRoutes as v2RoomRoutes } from "./v2/index.js";
+import { syncRoutes as v2SyncRoutes } from "./v2/index.js";
+
+
 
 // Importer la documentation Swagger
 import { swaggerDocument } from "./swagger.js";

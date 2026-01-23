@@ -4,8 +4,8 @@
 // ============================================
 
 import { Router } from "express";
-import { SyncController } from "../../controllers/sync.controller.js";
-import { requireApiKey } from "../../middleware/auth.middleware.js";
+import { SyncController } from "../../../controllers/sync.controller.js";
+import { requireApiKey } from "../../../middleware/auth.middleware.js";
 
 const router = Router();
 

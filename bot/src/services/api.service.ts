@@ -25,8 +25,11 @@ export class ApiService {
      */
     async getRoomsAvailability(startTime: Date, endTime: Date): Promise<RoomWithLessonsResponse[]> {
         const url = `${API_URL}/api/v1/rooms/availability?startTime=${startTime.toISOString()}&endTime=${endTime.toISOString()}`;
+        console.log(`Fetching rooms availability from URL: ${url}`);
 
         const response = await fetch(url);
+
+    
         const data = (await response.json()) as RoomsAvailabilityResponse;
 
         if (!data.success) {

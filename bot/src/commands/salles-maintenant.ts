@@ -9,6 +9,7 @@ import { ApiService } from "../services/api.service.js";
 import { createRoomAvailabilityEmbed } from "../utils/embed-builder.js";
 import { logCommand } from "../services/logger.service.js";
 
+
 export const sallesMaintenantCommand: BotCommand = {
     data: new SlashCommandBuilder()
         .setName("salles_maintenant")

@@ -6,7 +6,7 @@
 import { Router } from "express";
 
 // On importe le contrôleur
-import { RoomController } from "../../controllers/room.controller.js";
+import { RoomController } from "../../../controllers/room.controller.js";
 
 // Créer un routeur Express
 const router = Router();
