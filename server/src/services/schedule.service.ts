@@ -63,7 +63,8 @@ export async function getScheduleForGroup(query: ScheduleQuery): Promise<Schedul
 
     // Transformer en format Course
     const courses: Course[] = lessons.map((lesson) => {
-        // Récupérer le titre depuis content.name
+        // Récupérer le code et le titre depuis content
+        const code = lesson.content?.code || "";
         const title = lesson.content?.name || "Cours";
 
         // Récupérer les salles
@@ -77,6 +78,7 @@ export async function getScheduleForGroup(query: ScheduleQuery): Promise<Schedul
 
         return {
             id: lesson.id,
+            code,
             title,
             startTime: lesson.start_datetime.toISOString(),
             endTime: lesson.end_datetime.toISOString(),

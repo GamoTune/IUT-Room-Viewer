@@ -3,6 +3,7 @@
  */
 export interface Course {
     id: number;
+    code: string;
     title: string;
     startTime: string; // ISO 8601
     endTime: string;   // ISO 8601

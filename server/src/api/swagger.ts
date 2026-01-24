@@ -490,6 +490,10 @@ export const swaggerDocument = {
                         type: "integer",
                         example: 4192,
                     },
+                    code: {
+                        type: "string",
+                        example: "R1.09",
+                    },
                     title: {
                         type: "string",
                         example: "Projet professionnel et personnel",
