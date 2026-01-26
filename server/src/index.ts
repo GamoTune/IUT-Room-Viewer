@@ -3,6 +3,7 @@
 // Point d'entrée principal de l'application
 // ============================================
 
+import "dotenv/config";
 import { app } from "./api/app.js";
 import { SyncScheduler } from "./sync/sync.scheduler.js";
 

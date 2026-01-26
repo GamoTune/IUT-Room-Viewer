@@ -239,43 +239,83 @@ export class SyncService {
     /**
      * Formate une lesson Unilim vers le format BDD
      */
+    /**
+     * Formate une lesson Unilim vers le format BDD
+     * Version corrigée : Gestion robuste des fallbacks pour éviter les "N/A"
+     */
     private formatLesson(lesson: TimetableLesson, fromYear: TimetableYear): FormattedLesson {
-        // Extraire les données communes
+        // 1. Extraire les données de base (dates et type)
         const startDatetime = lesson.start_date.toJSDate();
         const endDatetime = lesson.end_date.toJSDate();
         const type = lesson.type;
 
-        // Extraire le contenu selon le type
+        // 2. Initialisation des variables avec valeurs par défaut
         let contentCode = "N/A";
         let contentName = "N/A";
         let teacherName: string | null = null;
         let roomNames: string[] = [];
 
+        // 3. Extraction intelligente du contenu (si disponible)
         if ("content" in lesson) {
             const content = lesson.content;
-            teacherName = content.teacher || null;
-            roomNames = this.formatRoomNames(content.room || null);
 
-            if ("type" in content) {
+            // --- A. Extraction des Salles et Profs ---
+            // On vérifie l'existence des propriétés avant accès
+            teacherName = "teacher" in content ? (content.teacher || null) : null;
+            roomNames = this.formatRoomNames("room" in content ? (content.room || null) : null);
+
+            // --- B. Extraction du Code Matière (ex: R1.01) ---
+            if ("type" in content && content.type) {
                 contentCode = content.type;
+            } else {
+                // Fallback : On cherche un motif type "R1.01" ou "S2.04" dans la description ou le raw
+                const rawDesc = ("description" in content ? content.description : "") || 
+                                ("raw_lesson" in content ? content.raw_lesson : "") || "";
+                
+                const codeMatch = rawDesc.match(/\b([RS]\d\.\d{2})\b/);
+                if (codeMatch) {
+                    contentCode = codeMatch[1];
+                }
             }
-            if ("lesson_from_reference" in content && content.lesson_from_reference) {
-                contentName = content.lesson_from_reference;
-            } else if ("description" in content) {
-                contentName = content.description || "N/A";
-            } else if ("raw_lesson" in content) {
-                contentName = content.raw_lesson || "N/A";
+
+            // --- C. Extraction du Nom du cours (Stratégie de Cascade) ---
+            // On extrait d'abord les valeurs potentielles de manière sécurisée pour TS
+            const refName = "lesson_from_reference" in content ? content.lesson_from_reference : null;
+            const descName = "description" in content ? content.description : null;
+            const rawName = "raw_lesson" in content ? content.raw_lesson : null;
+
+            // Liste de priorité : Référence > Description > Raw > Code Matière
+            const candidates = [
+                refName,
+                descName,
+                rawName,
+                // Si on a trouvé un code (ex: R1.01) mais aucun titre, le code devient le titre
+                (contentCode !== "N/A" && contentCode !== "AUTRE") ? contentCode : null
+            ];
+
+            // On prend le premier candidat qui est une chaîne non vide
+            const foundName = candidates.find((c): c is string => {
+                return typeof c === "string" && c.trim().length > 0;
+            });
+
+            if (foundName) {
+                contentName = foundName;
+                
+                // Nettoyage final : supprimer les sauts de ligne et espaces superflus
+                contentName = contentName.replace(/\r?\n|\r/g, " ").trim();
+                
+                // Optionnel : Si c'est du raw_lesson, on peut nettoyer un peu plus si besoin
+                // (ex: couper après le premier point ou tiret si c'est trop long)
             }
         }
 
-        // Extraire le groupe selon le type de cours
-        let mainGroup = YEAR_TO_MAIN_GROUP[fromYear]; // Par défaut : toute l'année
-        let subGroup = -1; // -1 = pas de sous-groupe
+        // 4. Gestion des Groupes (Logique existante conservée)
+        let mainGroup = YEAR_TO_MAIN_GROUP[fromYear];
+        let subGroup = -1;
 
         if ("group" in lesson && lesson.group !== undefined) {
             mainGroup = lesson.group.main;
             if ("sub" in lesson.group && lesson.group.sub !== undefined) {
-                // SUBGROUPS.A = 0 → 1, SUBGROUPS.B = 1 → 2
                 subGroup = lesson.group.sub === SUBGROUPS.A ? 1 : 2;
             }
         }

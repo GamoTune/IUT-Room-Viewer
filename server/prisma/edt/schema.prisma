@@ -32,6 +32,7 @@ model lesson {
   @@index([content_id], map: "content_id")
   @@index([teacher_id], map: "teacher_id")
   @@index([edt_id], map: "lesson_edt_index_id_fk")
+  @@index([start_datetime, end_datetime])
 }
 
 model lesson_group {
@@ -64,6 +65,7 @@ model student_group {
   id           Int            @id @default(autoincrement())
   main_group   Int
   sub_group    Int
+  name         String?         @edt_db.VarChar(5)
   lesson_group lesson_group[]
 
   @@unique([main_group, sub_group])
