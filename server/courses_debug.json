@@ -1,0 +1,76 @@
+[
+  {
+    "id": 1879,
+    "type": "TD",
+    "start_datetime": "2026-02-05T07:00:00.000Z",
+    "end_datetime": "2026-02-05T09:00:00.000Z",
+    "content_id": 69,
+    "teacher_id": 2,
+    "edt_id": 40,
+    "content": {
+      "id": 69,
+      "code": "R4.06",
+      "name": "Communication interne"
+    },
+    "teacher": {
+      "id": 2,
+      "name": "JL"
+    },
+    "lesson_room": [
+      {
+        "lesson_id": 1879,
+        "room_id": 3,
+        "room": {
+          "id": 3,
+          "name": "R52"
+        }
+      }
+    ],
+    "lesson_group": [
+      {
+        "lesson_id": 1879,
+        "group_id": 12,
+        "group": {
+          "name": "G5"
+        }
+      }
+    ]
+  },
+  {
+    "id": 2514,
+    "type": "TD",
+    "start_datetime": "2026-02-05T09:00:00.000Z",
+    "end_datetime": "2026-02-05T11:00:00.000Z",
+    "content_id": 92,
+    "teacher_id": 2,
+    "edt_id": 60,
+    "content": {
+      "id": 92,
+      "code": "R6A.04",
+      "name": "R6A.04"
+    },
+    "teacher": {
+      "id": 2,
+      "name": "JL"
+    },
+    "lesson_room": [
+      {
+        "lesson_id": 2514,
+        "room_id": 14,
+        "room": {
+          "id": 14,
+          "name": "R46"
+        }
+      }
+    ],
+    "lesson_group": [
+      {
+        "lesson_id": 2514,
+        "group_id": 19,
+        "group": {
+          "name": "G8"
+        }
+      }
+    ]
+  }
+]

@@ -14,14 +14,13 @@ import { statsRoutes } from "./v1/index.js";
 
 
 // Import des routes v2
-// Importer les routes V2
-import { roomRoutes as v2RoomRoutes } from "./v2/index.js";
-import { syncRoutes as v2SyncRoutes } from "./v2/index.js";
+import { courseRoutes } from "./v2/routes/courses.route.js";
 
 
 
-// Importer la documentation Swagger
-import { swaggerDocument } from "./swagger.js";
+// Importer les documentations Swagger v1 et v2
+import { swaggerDocument as swaggerDocumentV1 } from "./v1/swagger.js";
+import { swaggerDocumentV2 } from "./v2/swagger.js";
 
 // Créer l'application Express
 const app = express();
@@ -48,52 +47,78 @@ app.use((_req, res, next) => {
 // Routes
 // ============================================
 
+
+// =========== Routes Générales ===============
+
+
 // Route de santé (pour vérifier que le serveur fonctionne)
 app.get("/health", (_req, res) => {
     res.json({
         status: "ok",
+        version: process.env.VERSION,
         uptime: process.uptime(),
         timestamp: new Date().toISOString()
     });
 });
 
-// Documentation Swagger (routes publiques uniquement)
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+// Documentation Swagger v1
+app.use("/docs/v1", swaggerUi.serveFiles(swaggerDocumentV1), swaggerUi.setup(swaggerDocumentV1, {
     customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: "IUT Room Viewer API - Documentation",
+    customSiteTitle: "IUT Room Viewer API v1 - Documentation",
 }));
+
+// Documentation Swagger v2
+app.use("/docs/v2", swaggerUi.serveFiles(swaggerDocumentV2), swaggerUi.setup(swaggerDocumentV2, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: "IUT Room Viewer API v2 - Documentation",
+}));
+
+// Redirection /docs vers la dernière version (v2)
+app.get("/docs", (_req, res) => {
+    res.redirect("/docs/v2");
+});
 
 // Page d'accueil de l'API
 app.get("/", (_req, res) => {
     res.json({
         name: "IUT Room Viewer API",
         version: process.env.VERSION,
-        documentation: "/docs",
+        documentation: {
+            v1: "/docs/v1",
+            v2: "/docs/v2",
+            latest: "/docs",
+        },
         endpoints: {
             health: "/health",
-            docs: "/docs",
-            rooms: "/api/v1/rooms",
-            sync: "/api/v1/sync",
-            schedule: "/api/v1/schedule",
-            stats: "/api/v1/stats",
+            v1: {
+                rooms: "/api/v1/rooms",
+                sync: "/api/v1/sync",
+                schedule: "/api/v1/schedule",
+                stats: "/api/v1/stats",
+            },
+            v2: {
+                courses: "/api/v2/courses",
+            },
         },
     });
 });
 
-// Monter les routes des salles
+
+// ============= Routes v1 ====================
+
 app.use("/api/v1/rooms", roomRoutes);
-
-// Monter les routes de synchronisation
 app.use("/api/v1/sync", syncRoutes);
-
-// Monter les routes du planning
 app.use("/api/v1/schedule", scheduleRoutes);
-
-// Monter les routes des statistiques
 app.use("/api/v1/stats", statsRoutes);
 
+
+// ============= Routes v2 ====================
+
+app.use("/api/v2/courses", courseRoutes);
+
+
 // ============================================
-// Gestion des erreurs (doit être à la fin)
+// Gestion des erreurs
 // ============================================
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     console.error("Erreur:", err.message);

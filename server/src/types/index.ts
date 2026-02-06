@@ -6,3 +6,5 @@
 // Ceci permet d'importer depuis "@/types" au lieu de "@/types/lesson.types"
 export * from "./lesson.types.js";
 export * from "./api.types.js";
+export * from "./course.types.js";
+export * from "./api.types.js";
