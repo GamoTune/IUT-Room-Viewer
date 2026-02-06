@@ -11,6 +11,7 @@ import {
     helpCommand,
     sallesMaintenantCommand,
     sallesEntreCommand,
+    edtProfCommand,
 } from "./commands/index.js";
 
 // Import events
@@ -34,6 +35,7 @@ const commands: BotCommand[] = [
     helpCommand,
     sallesMaintenantCommand,
     sallesEntreCommand,
+    edtProfCommand,
 ];
 
 for (const command of commands) {

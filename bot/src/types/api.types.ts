@@ -40,3 +40,35 @@ export interface ApiResponse<T> {
  * Room availability API response
  */
 export type RoomsAvailabilityResponse = ApiResponse<RoomWithLessonsResponse[]>;
+
+
+
+
+export interface Course {
+    code: string;
+    title: string;
+    type: string;
+    rooms: string[];
+    groups: string[];
+    teacher: string;
+    start_at: string; // ISO date string
+    end_at: string;   // ISO date string
+}
+
+
+/**
+ * Courses API parameters
+ */
+export interface CoursesApiParams {
+    startAt: Date;
+    endAt: Date;
+    groups?: string[]; // Optional array of group names
+    rooms?: string[];  // Optional array of room names
+    teachers?: string[]; // Optional array of teacher names
+}
+
+export interface CoursesApiResponse {
+    success: boolean;
+    data: Course[];
+    error?: string;
+}
