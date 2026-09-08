@@ -30,8 +30,11 @@ const TYPE_MAP: Record<string, LessonType> = {
     tp: "TP",
 };
 
-/** Un code de matière : `R1.01`, `S5A.01`, `R3.08`. */
-const SUBJECT_CODE = /^[RS]\d[A-Z]?\.\d{2}[A-Z]?$/;
+/**
+ * Un code de matière : `R1.01`, `S5A.01`, `R3.08`, et les codes non numériques
+ * que l'IUT emploie pour les temps hors module — `S3.St` pour le stage.
+ */
+const SUBJECT_CODE = /^[RS]\d[A-Z]?\.[A-Za-z0-9]{2,3}$/;
 
 /**
  * Lit une case, quelle que soit sa forme.

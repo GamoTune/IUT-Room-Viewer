@@ -6,6 +6,7 @@
 import "dotenv/config";
 import { app } from "./api/app.js";
 import { SyncScheduler } from "./sync/sync.scheduler.js";
+import { initializeDatabase } from "./utils/dataSource.js";
 
 /**
  * Démarre le serveur Express
@@ -13,6 +14,11 @@ import { SyncScheduler } from "./sync/sync.scheduler.js";
 async function main() {
     const port = parseInt(process.env.PORT || "3000", 10);
     const host = process.env.HOST || "0.0.0.0";
+
+    // La connexion est ouverte avant d'écouter : une requête ne doit jamais
+    // arriver sur une source de données non initialisée.
+    await initializeDatabase();
+    console.log("🗄️  Base de données connectée");
 
     app.listen(port, host, () => {
         console.log(`🚀 API démarrée sur http://${host}:${port}`);

@@ -8,53 +8,47 @@
 // ============================================
 
 import "dotenv/config";
-import { IcsSyncService } from "../sync/ics/ics-sync.service.js";
+import syncService from "../sync/sync.service.js";
+import { closeDatabase, initializeDatabase } from "../utils/dataSource.js";
 
 const args = new Set(process.argv.slice(2));
 const dryRun = args.has("--dry-run");
 const force = args.has("--force");
 
-async function main() {
+async function main(): Promise<void> {
     if (dryRun) {
         console.log("🔍 Analyse seule : aucune écriture en base ni sur disque\n");
+    } else {
+        await initializeDatabase();
     }
 
-    const summary = await IcsSyncService.instance.syncAll({
-        dryRun,
-        force,
-        backupPdfs: !dryRun,
-    });
+    const summary = await syncService.syncAll({ dryRun, force });
 
     if (dryRun) {
-        console.log("\n──────── Détail par fichier ────────");
+        console.log("\n──────── Détail par document ────────");
         for (const file of summary.files) {
             console.log(
-                `${file.file.year}/${file.file.groupCode} S${file.file.weekNumber}`.padEnd(16) +
-                    `${String(file.eventsParsed).padStart(3)} événements` +
-                    `   ${String(file.lessonsCreated).padStart(3)} inédits`,
+                `${file.file.scope} S${file.file.weekNumber}`.padEnd(12) +
+                    `${String(file.lessonsParsed).padStart(3)} cours`,
             );
         }
     }
 
     console.log("\n──────── Bilan ────────");
-    console.log(`Fichiers publiés      : ${summary.filesDiscovered}`);
+    console.log(`Documents d'année     : ${summary.filesDiscovered}`);
     console.log(`Traités               : ${summary.filesDownloaded}`);
     console.log(`Inchangés (304)       : ${summary.filesSkipped}`);
-    console.log(`Cours distincts       : ${summary.lessonsCreated}`);
+    console.log(`Cours créés           : ${summary.lessonsCreated}`);
     console.log(`Rattachements groupes : ${summary.lessonsLinked}`);
-    console.log(
-        `Doublons évités       : ${summary.lessonsLinked - summary.lessonsCreated}` +
-            " (cours communs publiés dans plusieurs groupes)",
-    );
 
     if (summary.unknownRooms.length > 0) {
         console.log(`\n⚠️  Salles hors référentiel : ${summary.unknownRooms.join(", ")}`);
-        console.log("   (à ajouter dans src/sync/ics/rooms.reference.ts si elles sont légitimes)");
+        console.log("   (à ajouter dans src/sync/rooms.reference.ts si elles sont légitimes)");
     }
 
-    if (summary.unparsedSummaries.length > 0) {
-        console.log(`\n⚠️  Intitulés non reconnus (${summary.unparsedSummaries.length}) :`);
-        for (const summaryText of summary.unparsedSummaries) console.log(`   - ${summaryText}`);
+    if (summary.unreadableCells.length > 0) {
+        console.log(`\n⚠️  Cases non interprétées (${summary.unreadableCells.length}) :`);
+        for (const cell of summary.unreadableCells) console.log(`   - ${cell}`);
     }
 
     if (summary.errors.length > 0) {
@@ -62,15 +56,12 @@ async function main() {
         for (const error of summary.errors) console.log(`   - ${error}`);
     }
 
-    if (!dryRun) {
-        const { closeDatabase } = await import("../db/client.js");
-        await closeDatabase();
-    }
-
+    if (!dryRun) await closeDatabase();
     process.exit(summary.success ? 0 : 1);
 }
 
-main().catch((error) => {
+main().catch(async (error) => {
     console.error("❌ Synchronisation interrompue :", error);
+    await closeDatabase();
     process.exit(1);
 });

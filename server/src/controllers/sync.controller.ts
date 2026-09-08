@@ -4,9 +4,9 @@
 // ============================================
 
 import type { Request, Response } from "express";
-import { SyncService } from "../services/sync.service.js";
+import syncService from "../sync/sync.service.js";
 import type { ApiResponse } from "../types/index.js";
-import type { SyncSummary, SyncStatus } from "../types/sync.types.js";
+import type { SyncStatus, SyncSummary } from "../sync/types.js";
 
 /**
  * Contrôleur pour les endpoints de synchronisation
@@ -21,7 +21,7 @@ export class SyncController {
     async triggerSync(_req: Request, res: Response): Promise<void> {
         try {
             // Vérifier si une sync est déjà en cours
-            const status = SyncService.instance.getStatus();
+            const status = syncService.getStatus();
             if (status.isRunning) {
                 res.status(409).json({
                     success: false,
@@ -31,7 +31,7 @@ export class SyncController {
             }
 
             // Lancer la synchronisation
-            const result = await SyncService.instance.syncAll();
+            const result = await syncService.syncAll();
 
             const response: ApiResponse<SyncSummary> = {
                 success: result.success,
@@ -53,10 +53,11 @@ export class SyncController {
      */
     async resetSync(_req: Request, res: Response): Promise<void> {
         try {
-            const deletedCount = await SyncService.instance.reset();
+            // Reprise complète : les en-têtes de cache sont ignorés
+            const result = await syncService.syncAll({ force: true });
             res.json({
-                success: true,
-                data: { deletedEdts: deletedCount }
+                success: result.success,
+                data: result,
             });
         } catch (error) {
             console.error("Erreur lors du reset de la sync:", error);
@@ -73,7 +74,7 @@ export class SyncController {
      */
     async getStatus(_req: Request, res: Response): Promise<void> {
         try {
-            const status = SyncService.instance.getStatus();
+            const status = syncService.getStatus();
 
             const response: ApiResponse<SyncStatus> = {
                 success: true,

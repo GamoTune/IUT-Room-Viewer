@@ -4,7 +4,7 @@
 // ============================================
 
 import cron from "node-cron";
-import { SyncService } from "../services/sync.service.js";
+import syncService from "./sync.service.js";
 
 /**
  * Planificateur de tâches pour la synchronisation automatique
@@ -13,7 +13,7 @@ import { SyncService } from "../services/sync.service.js";
 export class SyncScheduler {
     public static instance: SyncScheduler = new SyncScheduler();
 
-    private cronJob: cron.ScheduledTask | null = null;
+    private cronJob: ReturnType<typeof cron.schedule> | null = null;
     private isStarted = false;
 
     /**
@@ -29,7 +29,7 @@ export class SyncScheduler {
         // Cron expression: toutes les 10 minutes
         this.cronJob = cron.schedule("*/10 * * * *", async () => {
             // Vérifier si une sync est déjà en cours
-            const status = SyncService.instance.getStatus();
+            const status = syncService.getStatus();
             if (status.isRunning) {
                 console.log("⏰ [CRON] Sync en cours, on passe ce cycle");
                 return;
@@ -37,7 +37,7 @@ export class SyncScheduler {
 
             console.log("\n⏰ [CRON] Synchronisation automatique déclenchée");
             try {
-                await SyncService.instance.syncAll();
+                await syncService.syncAll();
             } catch (error) {
                 console.error("❌ [CRON] Erreur lors de la synchronisation:", error);
             }
