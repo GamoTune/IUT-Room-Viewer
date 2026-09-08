@@ -92,19 +92,19 @@ function readCompact(line: string, raw: string): CellContent | null {
  * sont donc lues depuis la fin.
  */
 function readDetailed(lines: string[], raw: string): CellContent {
-    const roomLine = lines.at(-1) ?? "";
-    const teacherLine = lines.at(-2) ?? "";
+    // Le type est écrit seul en tête de ligne, mais sa place varie et la salle
+    // le suit parfois sur la même ligne (`TP 105`).
+    const typeIndex = lines.findIndex((line) => TYPE_MAP[firstWord(line)] !== undefined);
+    const type = typeIndex === -1 ? "OTHER" : TYPE_MAP[firstWord(lines[typeIndex]!)]!;
 
-    // Le type est écrit seul sur sa ligne, mais sa position varie : un intitulé
-    // long déborde sur plusieurs lignes au-dessus.
-    const rest = lines.slice(0, -2);
-    const typeIndex = rest.findIndex((line) => TYPE_MAP[line.toLowerCase()] !== undefined);
-    const type = typeIndex === -1 ? "OTHER" : TYPE_MAP[rest[typeIndex]!.toLowerCase()]!;
-
-    const titleLines = typeIndex === -1 ? rest : rest.slice(0, typeIndex);
+    const titleLines = typeIndex === -1 ? lines.slice(0, -2) : lines.slice(0, typeIndex);
     const title = titleLines.join(" ").replace(/\s+/g, " ").trim();
 
-    const location = parseLocation(roomLine);
+    // Tout ce qui suit le titre peut porter la salle ou l'enseignant
+    const tail = typeIndex === -1 ? lines.slice(-2) : lines.slice(typeIndex);
+    const location = findLocation(tail, type);
+    const teacherName = findTeacher(tail, location.text);
+
     const code = title.split(" ").find((token) => SUBJECT_CODE.test(token));
     const label = extractLabel(title, code);
 
@@ -112,13 +112,60 @@ function readDetailed(lines: string[], raw: string): CellContent {
         subjectCode: code ?? fallbackCode(title),
         subjectLabel: label,
         type,
-        teacherName: teacherLine.length > 0 && teacherLine !== "." ? teacherLine : null,
+        teacherName,
         roomNames: location.roomNames,
         unknownRooms: location.unknownRooms,
         raw,
         // Un titre sans code ni intitulé lisible mérite d'être signalé
         degraded: code === undefined && label.length === 0,
     };
+}
+
+/** Premier mot d'une ligne, en minuscules. */
+function firstWord(line: string): string {
+    return (line.split(" ")[0] ?? "").toLowerCase();
+}
+
+/**
+ * Cherche la salle dans les lignes qui suivent le titre, quelle que soit sa
+ * position : elle peut être seule sur sa ligne ou accolée au type.
+ */
+function findLocation(lines: string[], type: LessonType): {
+    roomNames: string[];
+    unknownRooms: string[];
+    text: string | null;
+} {
+    for (const line of [...lines].reverse()) {
+        for (const token of line.split(" ")) {
+            if (TYPE_MAP[token.toLowerCase()] !== undefined) continue;
+
+            const parsed = parseLocation(token);
+            if (parsed.roomNames.length > 0) {
+                return { ...parsed, text: token };
+            }
+        }
+    }
+
+    void type;
+    return { roomNames: [], unknownRooms: [], text: null };
+}
+
+/**
+ * L'enseignant est ce qui reste : une ligne qui n'annonce ni le type ni la
+ * salle. Un point tient lieu d'absence.
+ */
+function findTeacher(lines: string[], roomText: string | null): string | null {
+    for (const line of [...lines].reverse()) {
+        const cleaned = line
+            .split(" ")
+            .filter((token) => token !== roomText && TYPE_MAP[token.toLowerCase()] === undefined)
+            .join(" ")
+            .trim();
+
+        if (cleaned.length > 0 && cleaned !== ".") return cleaned;
+    }
+
+    return null;
 }
 
 /**

@@ -159,6 +159,12 @@ function coveredGroups(cell: Cell, bands: Band[]): string[] {
         const overlap = overlapBottom - overlapTop;
         if (overlap <= 1) continue;
 
+        // Un document de sous-groupe nomme déjà sa bande `G1a` : rien à déduire.
+        if (/[ab]$/.test(band.groupCode)) {
+            codes.push(band.groupCode);
+            continue;
+        }
+
         const height = band.bottom - band.top;
         const mainGroup = Number(band.groupCode.slice(1));
         const [first, second] = subGroupCodes(mainGroup) as [string, string];

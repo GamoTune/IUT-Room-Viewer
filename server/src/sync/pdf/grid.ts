@@ -172,8 +172,8 @@ export function buildBands(page: PageGeometry, scale: TimeScale): Band[] {
     ).sort((a, b) => a - b);
 
     const groups = page.items
-        .filter((item) => /^G\d$/i.test(item.text.trim()))
-        .map((item) => ({ code: item.text.trim().toUpperCase(), y: item.y }))
+        .filter((item) => /^G\d[ab]?$/i.test(item.text.trim()))
+        .map((item) => ({ code: normalizeGroupCode(item.text.trim()), y: item.y }))
         .sort((a, b) => a.y - b.y);
 
     // Une bande par groupe et par jour : celles qui portent un libellé de groupe
@@ -196,6 +196,16 @@ export function buildBands(page: PageGeometry, scale: TimeScale): Band[] {
         ...band,
         day: days[Math.floor(index / groupsPerDay)] ?? days[days.length - 1]!,
     }));
+}
+
+/**
+ * `G1` reste `G1`, `G1A` devient `G1a` : les sous-groupes s'écrivent en
+ * minuscule dans le reste du code.
+ */
+function normalizeGroupCode(raw: string): string {
+    const matched = raw.match(/^G(\d)([ab])?$/i);
+    if (!matched) return raw.toUpperCase();
+    return `G${matched[1]}${matched[2]?.toLowerCase() ?? ""}`;
 }
 
 /**
