@@ -3,8 +3,10 @@
 // Traduction des cours vers le format attendu par l'API
 // ============================================
 
-import { loadGroupCensus, type GroupCensus } from "../repository/lesson.repository.js";
-import type { LessonResponse, LessonWithRelations, StudentGroup } from "../types/lesson.types.js";
+import type { GroupCensus } from "../repository/lesson.repository.js";
+import type { Lesson } from "../entities/lesson.entity.js";
+import type { StudentGroup } from "../entities/studentGroup.entity.js";
+import type { GroupRef, LessonResponse } from "../types/lesson.types.js";
 
 /**
  * Identifiants d'année attendus par le bot : `A1` → -1, `A2` → -2, `A3` → -3
@@ -25,17 +27,14 @@ function subGroupToNumber(subGroup: string | null): number {
 /**
  * Traduit les groupes d'un cours vers la forme `{ mainGroup, subGroup }`.
  *
- * Les ICS n'étant publiés que par sous-groupe, un cours suivi collectivement
- * apparaît rattaché à plusieurs d'entre eux. On restitue donc le niveau réel :
- * tous les sous-groupes d'une année → cours de promo (`mainGroup` négatif) ;
- * tous les sous-groupes d'un groupe → groupe entier (`subGroup: -1`).
- * Sans quoi un amphi de A1 s'afficherait `G1A` et un TD de G1 s'afficherait
- * `G1A` au lieu de `G1`.
+ * Les emplois du temps étant publiés par sous-groupe, un cours suivi
+ * collectivement apparaît rattaché à plusieurs d'entre eux. On restitue donc le
+ * niveau réel : tous les sous-groupes d'une année → cours de promotion
+ * (`mainGroup` négatif) ; tous les sous-groupes d'un groupe → groupe entier
+ * (`subGroup: -1`). Sans quoi un amphi de A1 s'afficherait `G1A`, et un TD de
+ * G1 s'afficherait `G1A` au lieu de `G1`.
  */
-export function toGroupRefs(
-    groups: StudentGroup[],
-    census: GroupCensus,
-): Array<{ mainGroup: number; subGroup: number }> {
+export function toGroupRefs(groups: StudentGroup[], census: GroupCensus): GroupRef[] {
     if (groups.length === 0) return [];
 
     const years = new Set(groups.map((group) => group.year));
@@ -57,7 +56,7 @@ export function toGroupRefs(
         else byMainGroup.set(group.mainGroup, [group]);
     }
 
-    const refs: Array<{ mainGroup: number; subGroup: number }> = [];
+    const refs: GroupRef[] = [];
 
     for (const [mainGroup, members] of byMainGroup) {
         const expected = census.perMainGroup.get(mainGroup);
@@ -76,11 +75,8 @@ export function toGroupRefs(
 }
 
 /**
- * Libellés lisibles des groupes d'un cours : `A1` pour une promo entière,
+ * Libellés lisibles des groupes d'un cours : `A1` pour une promotion entière,
  * `G1` pour un groupe entier, `G7A` pour un sous-groupe.
- *
- * Même convention que `formatGroupCode` côté bot, appliquée ici pour que
- * l'API v2 parle le même langage que les commandes `/salles_*`.
  */
 export function toGroupLabels(groups: StudentGroup[], census: GroupCensus): string[] {
     return toGroupRefs(groups, census).map(({ mainGroup, subGroup }) => {
@@ -90,27 +86,24 @@ export function toGroupLabels(groups: StudentGroup[], census: GroupCensus): stri
     });
 }
 
+/** Groupes rattachés à un cours, extraits de ses liaisons. */
+export function groupsOf(lesson: Lesson): StudentGroup[] {
+    return (lesson.groups ?? []).map((link) => link.group).filter((group): group is StudentGroup => Boolean(group));
+}
+
 /**
  * Traduit un cours complet en réponse API.
  */
-export function toLessonResponse(
-    lesson: LessonWithRelations,
-    census: GroupCensus,
-): LessonResponse {
+export function toLessonResponse(lesson: Lesson, census: GroupCensus): LessonResponse {
     return {
         id: lesson.id,
         type: lesson.type,
         startTime: lesson.startUtc.toISOString(),
         endTime: lesson.endUtc.toISOString(),
-        rooms: lesson.rooms.map((entry) => entry.room.name),
+        rooms: (lesson.rooms ?? []).map((room) => room.name),
         teacher: lesson.teacher?.name ?? null,
         contentCode: lesson.subject.code,
         contentName: lesson.subject.label,
-        groups: toGroupRefs(
-            lesson.groups.map((entry) => entry.group),
-            census,
-        ),
+        groups: toGroupRefs(groupsOf(lesson), census),
     };
 }
-
-export { loadGroupCensus };

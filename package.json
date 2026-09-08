@@ -12,7 +12,6 @@
     "dev": "bun --filter '*' dev",
     "start:server": "bun --filter server start",
     "start:bot": "bun --filter bot start",
-    "start": "bun --filter '*' start",
-    "generate": "bun --filter server generate"
+    "start": "bun --filter '*' start"
   }
 }

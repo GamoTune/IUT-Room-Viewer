@@ -3,7 +3,14 @@
 // Lecture des fichiers ICS publiés par l'IUT
 // ============================================
 
-import type { RawIcsEvent } from "./types.js";
+/** Un VEVENT brut, avant toute interprétation du contenu. */
+export interface RawIcsEvent {
+    uid: string | null;
+    start: Date;
+    end: Date;
+    summary: string;
+    location: string;
+}
 
 /**
  * Les fichiers de l'IUT annoncent `ENCODING=QUOTED-PRINTABLE` sur SUMMARY et

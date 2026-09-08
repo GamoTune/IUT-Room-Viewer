@@ -1,70 +1,33 @@
 // ============================================
 // 📁 src/types/lesson.types.ts
-// Types simplifiés avec inférence Prisma
+// Types métier et formats de réponse de l'API
 // ============================================
 
-import { Prisma } from "../../generated/edt-client/client.js";
+import type { Lesson } from "../entities/lesson.entity.js";
+import type { Room } from "../entities/room.entity.js";
+import type { StudentGroup } from "../entities/studentGroup.entity.js";
 
-// ============================================
-// Types de base (réexportés depuis Prisma)
-// ============================================
+export type { Room } from "../entities/room.entity.js";
+export type { Teacher } from "../entities/teacher.entity.js";
+export type { Subject } from "../entities/subject.entity.js";
+export type { StudentGroup } from "../entities/studentGroup.entity.js";
+export type { Lesson } from "../entities/lesson.entity.js";
+export type { EdtSource } from "../entities/edtSource.entity.js";
 
-export type {
-    room as Room,
-    teacher as Teacher,
-    content as Content,
-    student_group as StudentGroup,
-    lesson as Lesson,
-    lesson_group as LessonGroup,
-    lesson_room as LessonRoom,
-    edt_index as EdtIndex,
-} from "../../generated/edt-client/client.js";
+/** Un cours chargé avec tout ce qu'il faut pour le présenter. */
+export type LessonWithRelations = Lesson;
 
-// ============================================
-// Définition des "includes" Prisma
-// ============================================
+/** Une salle et les cours qui l'occupent sur une période. */
+export interface RoomWithLessons {
+    room: Room;
+    lessons: Lesson[];
+}
 
-// Include pour un cours avec toutes ses relations
-export const lessonFullInclude = Prisma.validator<Prisma.lessonDefaultArgs>()({
-    include: {
-        content: true,
-        lesson_room: { include: { room: true } },
-        teacher: true,
-        lesson_group: { include: { group: true } },
-    },
-});
-
-// Include pour une salle avec ses cours
-export const roomWithLessonsInclude = Prisma.validator<Prisma.roomDefaultArgs>()({
-    include: {
-        lesson_room: {
-            include: {
-                lesson: {
-                    include: {
-                        content: true,
-                        teacher: true,
-                        lesson_group: { include: { group: true } },
-                        lesson_room: { include: { room: true } },
-                    },
-                },
-            },
-        },
-    },
-});
-
-// ============================================
-// Types enrichis (inférés automatiquement !)
-// ============================================
-
-/** Un cours avec toutes ses relations */
-export type LessonFull = Prisma.lessonGetPayload<typeof lessonFullInclude>;
-
-/** Une salle avec ses cours via lesson_room */
-export type RoomWithLessons = Prisma.roomGetPayload<typeof roomWithLessonsInclude>;
-
-// ============================================
-// Types API (format JSON pour les réponses)
-// ============================================
+/** Groupes d'un cours, tels qu'attendus par le bot. */
+export interface GroupRef {
+    mainGroup: number;
+    subGroup: number;
+}
 
 /** Version JSON d'un cours (dates en ISO string) */
 export interface LessonResponse {
@@ -76,7 +39,7 @@ export interface LessonResponse {
     teacher: string | null;
     contentCode: string;
     contentName: string;
-    groups: Array<{ mainGroup: number; subGroup: number }>;
+    groups: GroupRef[];
 }
 
 /** Réponse API pour une salle avec ses cours */
@@ -100,3 +63,6 @@ export interface GroupScheduleResponse {
     period: { start: string; end: string };
     lessons: LessonResponse[];
 }
+
+/** Groupes d'un cours, pour l'agrégation en niveaux d'affichage. */
+export type LessonGroups = StudentGroup[];

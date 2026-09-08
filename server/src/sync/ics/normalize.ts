@@ -3,15 +3,10 @@
 // Interprétation du contenu textuel des événements ICS
 // ============================================
 
-import { createHash } from "node:crypto";
-import type { LessonType } from "../../db/schema.js";
-import { isKnownRoom } from "./rooms.reference.js";
-import type { ParsedLesson, RawIcsEvent } from "./types.js";
+import type { LessonType } from "../../entities/enums.js";
+import type { RawIcsEvent } from "./parser.js";
 
-/**
- * Valeur utilisée par l'IUT pour « pas de salle » (jours fériés notamment).
- */
-const NO_ROOM = ".";
+import { NO_ROOM } from "../rooms.js";
 
 /**
  * Correspondance des libellés de type publiés vers nos types internes.
@@ -101,119 +96,4 @@ function extractLabel(middle: string[], subjectCode: string): string {
     if (withoutCode.length > 0) return withoutCode.join(" ").trim();
 
     return subjectCode;
-}
-
-export interface LocationParts {
-    roomNames: string[];
-    unknownRooms: string[];
-}
-
-/**
- * Interprète un LOCATION.
- *
- * Formats rencontrés :
- *   `R52`, `103`   → une salle
- *   `AC`, `AB`     → amphithéâtres C et B
- *   `108-9`        → salles 108 **et** 109
- *   `111-2`        → salles 111 et 112
- *   `.` ou vide    → aucune salle
- */
-export function parseLocation(location: string): LocationParts {
-    const cleaned = location.trim();
-    if (cleaned.length === 0 || cleaned === NO_ROOM) {
-        return { roomNames: [], unknownRooms: [] };
-    }
-
-    const candidates = expandRoomRange(cleaned).map(normalizeRoomName);
-
-    const roomNames: string[] = [];
-    const unknownRooms: string[] = [];
-
-    for (const candidate of candidates) {
-        if (candidate.length === 0) continue;
-        if (isKnownRoom(candidate)) {
-            if (!roomNames.includes(candidate)) roomNames.push(candidate);
-        } else if (!unknownRooms.includes(candidate)) {
-            unknownRooms.push(candidate);
-        }
-    }
-
-    return { roomNames, unknownRooms };
-}
-
-/**
- * Développe une notation abrégée de deux salles.
- *
- * Le suffixe remplace la fin du premier nom : `108-9` → `108` + `109`,
- * `111-2` → `111` + `112`, `104-5` → `104` + `105`.
- * (L'ancienne implémentation faisait « premier numéro + 1 », ce qui ne
- * tombait juste que par coïncidence sur les salles actuelles.)
- */
-export function expandRoomRange(location: string): string[] {
-    const separatorIndex = location.indexOf("-");
-    if (separatorIndex === -1) return [location];
-
-    const base = location.slice(0, separatorIndex).trim();
-    const suffix = location.slice(separatorIndex + 1).trim();
-
-    if (base.length === 0 || suffix.length === 0 || suffix.length >= base.length) {
-        return [location];
-    }
-
-    const second = base.slice(0, base.length - suffix.length) + suffix;
-    return [base, second];
-}
-
-/**
- * Normalise un nom de salle isolé : `AC` → `AmphC`, `AmpB` → `AmphB`.
- */
-export function normalizeRoomName(room: string): string {
-    const cleaned = room.trim();
-    if (cleaned.length === 0) return "";
-
-    const amphi = cleaned.match(/^(?:A|Amp|Amph)([A-Z])$/i);
-    if (amphi) return `Amph${amphi[1]!.toUpperCase()}`;
-
-    return cleaned;
-}
-
-/**
- * Construit un cours exploitable à partir d'un VEVENT.
- */
-export function toParsedLesson(event: RawIcsEvent): ParsedLesson {
-    const summary = parseSummary(event.summary);
-    const location = parseLocation(event.location);
-
-    return {
-        start: event.start,
-        end: event.end,
-        type: summary.type,
-        subjectCode: summary.subjectCode,
-        subjectLabel: summary.subjectLabel,
-        teacherInitials: summary.teacherInitials,
-        roomNames: location.roomNames,
-        unknownRooms: location.unknownRooms,
-        rawSummary: event.summary.slice(0, 255),
-        rawLocation: event.location,
-        degraded: summary.degraded,
-    };
-}
-
-/**
- * Empreinte d'un cours, indépendante du fichier qui le publie.
- *
- * C'est la clé du dédoublonnage : un CM de promo apparaît à l'identique dans
- * l'ICS de chaque sous-groupe, il ne doit être stocké qu'une fois.
- */
-export function computeDedupKey(lesson: ParsedLesson): string {
-    const canonical = [
-        lesson.start.toISOString(),
-        lesson.end.toISOString(),
-        lesson.type,
-        lesson.subjectCode,
-        lesson.teacherInitials ?? "",
-        [...lesson.roomNames].sort().join("+"),
-    ].join("|");
-
-    return createHash("sha1").update(canonical).digest("hex");
 }
