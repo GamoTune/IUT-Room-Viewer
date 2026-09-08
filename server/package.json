@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "start": "bun src/index.ts",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
     "gen:edt": "bunx prisma generate --schema=./prisma/edt/schema.prisma",
     "gen:stats": "bunx prisma generate --schema=./prisma/stats/schema.prisma",
     "generate": "bun run gen:edt && bun run gen:stats"
@@ -17,6 +19,7 @@
     "express": "^4.22.1",
     "mariadb": "^3.4.5",
     "node-cron": "^4.2.1",
+    "pdfjs-dist": "4.10.38",
     "swagger-ui-express": "^5.0.1",
     "unilim": "^2.0.1",
     "zod": "^3.25.76"
