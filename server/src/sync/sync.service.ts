@@ -13,6 +13,13 @@ export interface SyncOptions {
     dryRun?: boolean;
     /** Ignore les en-têtes de cache et retélécharge tout. */
     force?: boolean;
+    /**
+     * Archive aussi les fichiers non exploités — documents de groupe et `.ics`.
+     *
+     * Ils sont dix fois plus nombreux que les emplois du temps d'année : les
+     * vérifier à chaque passage chargerait le serveur de l'IUT pour rien.
+     */
+    archiveOthers?: boolean;
 }
 
 /**
@@ -62,7 +69,7 @@ export class SyncService {
             }
 
             if (!options.dryRun) {
-                await this.archiveOthers(files, options);
+                if (options.archiveOthers) await this.archiveOthers(files, options);
 
                 const { Importer } = await import("./importer.js");
                 const orphans = await Importer.instance.deleteOrphanLessons();

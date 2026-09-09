@@ -31,7 +31,7 @@ export class SyncController {
             }
 
             // Lancer la synchronisation
-            const result = await syncService.syncAll();
+            const result = await syncService.syncAll({ archiveOthers: true });
 
             const response: ApiResponse<SyncSummary> = {
                 success: result.success,
@@ -54,7 +54,7 @@ export class SyncController {
     async resetSync(_req: Request, res: Response): Promise<void> {
         try {
             // Reprise complète : les en-têtes de cache sont ignorés
-            const result = await syncService.syncAll({ force: true });
+            const result = await syncService.syncAll({ force: true, archiveOthers: true });
             res.json({
                 success: result.success,
                 data: result,

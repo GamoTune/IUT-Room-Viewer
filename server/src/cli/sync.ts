@@ -5,6 +5,7 @@
 //   bun run sync              synchronisation complète
 //   bun run sync --dry-run    analyse seule, aucune écriture
 //   bun run sync --force      ignore les en-têtes de cache
+//   bun run sync --archive    archive aussi les fichiers non exploités
 // ============================================
 
 import "dotenv/config";
@@ -14,6 +15,7 @@ import { closeDatabase, initializeDatabase } from "../utils/dataSource.js";
 const args = new Set(process.argv.slice(2));
 const dryRun = args.has("--dry-run");
 const force = args.has("--force");
+const archiveOthers = args.has("--archive");
 
 async function main(): Promise<void> {
     if (dryRun) {
@@ -22,7 +24,7 @@ async function main(): Promise<void> {
         await initializeDatabase();
     }
 
-    const summary = await syncService.syncAll({ dryRun, force });
+    const summary = await syncService.syncAll({ dryRun, force, archiveOthers });
 
     if (dryRun) {
         console.log("\n──────── Détail par document ────────");
