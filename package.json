@@ -4,7 +4,8 @@
   "private": true,
   "workspaces": [
     "server",
-    "bot"
+    "bot",
+    "web"
   ],
   "scripts": {
     "dev:server": "bun --filter server dev",
@@ -12,6 +13,7 @@
     "dev": "bun --filter '*' dev",
     "start:server": "bun --filter server start",
     "start:bot": "bun --filter bot start",
-    "start": "bun --filter '*' start"
+    "start": "bun --filter '*' start",
+    "dev:web": "bun --filter web dev"
   }
 }
