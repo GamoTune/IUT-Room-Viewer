@@ -56,6 +56,18 @@ const loading = computed(() => totalCount.value === 0 && freshness.value === "re
 /** Les curseurs natifs rendent une chaîne : le composable attend des minutes. */
 const onStart = (event: Event): void => picker.setStart(Number((event.target as HTMLInputElement).value));
 const onDuration = (event: Event): void => picker.setDuration(Number((event.target as HTMLInputElement).value));
+
+/**
+ * Part remplie de la piste. La piste étant redessinée, le navigateur ne colore
+ * plus lui-même la portion parcourue : il faut la lui donner.
+ */
+function fill(value: number, min: number, max: number): string {
+    if (max <= min) return "0%";
+    return `${((value - min) / (max - min)) * 100}%`;
+}
+
+const startFill = computed(() => fill(picker.start.value, DAY_START_MINUTES, picker.maxStart.value));
+const durationFill = computed(() => fill(picker.duration.value, MIN_DURATION_MINUTES, MAX_DURATION_MINUTES));
 </script>
 
 <template>
@@ -89,6 +101,7 @@ const onDuration = (event: Event): void => picker.setDuration(Number((event.targ
                     :max="picker.maxStart.value"
                     :step="SLOT_MINUTES"
                     :value="picker.start.value"
+                    :style="{ '--fill': startFill }"
                     :aria-valuetext="formatTime(picker.start.value)"
                     @input="onStart"
                 />
@@ -106,6 +119,7 @@ const onDuration = (event: Event): void => picker.setDuration(Number((event.targ
                     :max="MAX_DURATION_MINUTES"
                     :step="SLOT_MINUTES"
                     :value="picker.duration.value"
+                    :style="{ '--fill': durationFill }"
                     :aria-valuetext="formatDuration(picker.duration.value)"
                     @input="onDuration"
                 />
@@ -215,14 +229,61 @@ const onDuration = (event: Event): void => picker.setDuration(Number((event.targ
     margin-left: auto;
 }
 
-/* Le design system n'a pas de curseur : celui-ci reprend ses tokens. */
+/* Le design system n'a pas de curseur : celui-ci reprend ses tokens. Le rendu
+   natif est neutralisé — sa piste porte un liseré clair qui jure sur un fond
+   sombre — donc piste et poignée sont redessinées, remplissage compris. */
 .picker__slider {
+    --track-height: 0.375rem;
+    --thumb-size: 1rem;
+
+    -webkit-appearance: none;
+    appearance: none;
     width: 100%;
-    height: 1.5rem;
+    height: var(--thumb-size);
     margin: 0;
+    border: 0;
     background: transparent;
-    accent-color: var(--lav);
     cursor: pointer;
+}
+
+.picker__slider::-webkit-slider-runnable-track {
+    height: var(--track-height);
+    border: 0;
+    border-radius: var(--radius-full, 999px);
+    background: linear-gradient(to right, var(--lav) 0 var(--fill), var(--border) var(--fill) 100%);
+}
+
+.picker__slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: var(--thumb-size);
+    height: var(--thumb-size);
+    /* Recentre la poignée sur une piste plus fine qu'elle. */
+    margin-top: calc((var(--track-height) - var(--thumb-size)) / 2);
+    border: 0;
+    border-radius: 50%;
+    background: var(--lav);
+}
+
+.picker__slider::-moz-range-track {
+    height: var(--track-height);
+    border: 0;
+    border-radius: var(--radius-full, 999px);
+    background: var(--border);
+}
+
+.picker__slider::-moz-range-progress {
+    height: var(--track-height);
+    border-radius: var(--radius-full, 999px);
+    background: var(--lav);
+}
+
+.picker__slider::-moz-range-thumb {
+    width: var(--thumb-size);
+    height: var(--thumb-size);
+    border: 0;
+    border-radius: 50%;
+    background: var(--lav);
 }
 
 .picker__slider:focus-visible {
