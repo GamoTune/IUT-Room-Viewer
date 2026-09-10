@@ -191,6 +191,17 @@ const durationFill = computed(() => fill(picker.duration.value, MIN_DURATION_MIN
     gap: var(--s4);
 }
 
+/* Sur un écran large, le créneau reste sous les yeux pendant qu'on parcourt les
+   étages : il se colle en haut et passe devant les cartes. Sur un téléphone il
+   défile normalement — collé, il mangerait un quart de l'écran en permanence. */
+@media (min-width: 60rem) {
+    .picker {
+        position: sticky;
+        top: var(--s3);
+        z-index: 2;
+    }
+}
+
 .picker__day {
     display: flex;
     align-items: center;

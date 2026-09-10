@@ -40,6 +40,9 @@ const SUBJECT_CODE = /^[RS]\d[A-Z]?\.[A-Za-z0-9]{2,3}$/;
  * Une SAÉ se distingue d'une ressource par son préfixe : `S5A.01` contre
  * `R5A.04`. C'est le seul marqueur fiable — le document ne qualifie pas ces
  * créneaux, et certains portent malgré tout un enseignant.
+ *
+ * Seul `S` désigne une SAÉ. Les codes en `P` sont des ressources comme ceux en
+ * `R` : leur type se déduit normalement de la portée de la case.
  */
 export function isSaeCode(code: string): boolean {
     return code.startsWith("S");
