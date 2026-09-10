@@ -18,7 +18,7 @@ const page = computed(() => PAGES[current.value]);
     <!-- Calque décoratif : il se place derrière le contenu, pas autour. -->
     <PageBackground intensity="subtle" />
 
-    <SiteHeader name="Salles IUT" prefix="iut" name-href="https://gamo.one" accent="lav">
+    <SiteHeader name="gamo" prefix="iut" name-href="https://gamo.one" accent="lav">
         <template #right>
             <button
                 v-for="route in ROUTES"
