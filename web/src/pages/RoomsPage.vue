@@ -2,8 +2,12 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { Alert, Button, EmptyState, SectionHeader, Skeleton, Surface } from "@gamo/ds";
 import FreshnessBadge from "../components/FreshnessBadge.vue";
+import GroupSelect from "../components/GroupSelect.vue";
 import RoomStatus from "../components/RoomStatus.vue";
+import { findGroup } from "../composables/groupMatch";
+import { useGroups } from "../composables/useGroups";
 import { useRooms } from "../composables/useRooms";
+import { useStoredGroup } from "../composables/useStoredGroup";
 import {
     DAY_START_MINUTES,
     MAX_DURATION_MINUTES,
@@ -15,7 +19,12 @@ import {
 } from "../composables/useRoomWindow";
 
 const picker = useRoomWindow();
-const { floors, freshness, updatedAt, reload } = useRooms(picker.window);
+
+const selected = useStoredGroup();
+const groups = useGroups();
+const group = computed(() => findGroup(groups.data.value, selected.value));
+
+const { floors, freshness, updatedAt, reload } = useRooms(picker.window, group);
 
 /** Heure affichée en tête, rafraîchie à la minute. */
 const now = ref(new Date());
@@ -51,6 +60,10 @@ const totalCount = computed(() =>
     floors.value.reduce((total, floor) => total + floor.rooms.length, 0),
 );
 
+const mineCount = computed(() =>
+    floors.value.reduce((total, floor) => total + floor.rooms.filter((room) => room.mine).length, 0),
+);
+
 const loading = computed(() => totalCount.value === 0 && freshness.value === "revalidating");
 
 /** Les curseurs natifs rendent une chaîne : le composable attend des minutes. */
@@ -77,6 +90,7 @@ const durationFill = computed(() => fill(picker.duration.value, MIN_DURATION_MIN
             <div class="rooms__actions">
                 <FreshnessBadge :freshness="freshness" :updated-at="updatedAt" />
                 <Button ghost size="sm" @click="reload">Actualiser</Button>
+                <GroupSelect v-model="selected" />
             </div>
         </header>
 
@@ -140,6 +154,9 @@ const durationFill = computed(() => fill(picker.duration.value, MIN_DURATION_MIN
             <strong>{{ freeCount }}</strong> salle{{ freeCount > 1 ? "s" : "" }} libre{{ freeCount > 1 ? "s" : "" }}
             sur {{ totalCount }}
             <template v-if="!picker.window.value.live">sur tout le créneau</template>
+            <template v-if="mineCount > 0">
+                · <strong class="rooms__mine">{{ mineCount }}</strong> pour {{ group?.label }}
+            </template>
         </p>
 
         <div v-if="loading" class="rooms__loading">
@@ -314,6 +331,10 @@ const durationFill = computed(() => fill(picker.duration.value, MIN_DURATION_MIN
 .rooms__summary {
     margin: 0;
     color: var(--muted);
+}
+
+.rooms__mine {
+    color: var(--lav);
 }
 
 .rooms__floor {

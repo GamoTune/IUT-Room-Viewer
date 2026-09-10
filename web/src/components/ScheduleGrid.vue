@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import type { Course } from "../types/api";
 import { addDays } from "../composables/useSchedule";
 import ScheduleLesson from "./ScheduleLesson.vue";
@@ -141,6 +141,52 @@ const visible = computed(() =>
 );
 
 const dayFormatter = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short" });
+
+/** Heure courante, pour le trait qui traverse la grille. Rafraîchie à la minute. */
+const now = ref(new Date());
+let ticker: ReturnType<typeof setInterval> | undefined;
+
+onMounted(() => {
+    ticker = setInterval(() => {
+        now.value = new Date();
+    }, 60_000);
+});
+
+onUnmounted(() => {
+    if (ticker) clearInterval(ticker);
+});
+
+/**
+ * Position d'aujourd'hui parmi les colonnes affichées, `null` s'il n'y figure
+ * pas — semaine passée ou à venir, week-end, ou jour unique portant sur un
+ * autre jour. C'est ce qui empêche de marquer « aujourd'hui » la semaine
+ * suivante.
+ */
+const todayPosition = computed<number | null>(() => {
+    const index = (now.value.getDay() + 6) % 7;
+    if (index > 5) return null;
+
+    // La colonne porte la date de la semaine affichée : si elle ne tombe pas sur
+    // aujourd'hui, c'est qu'on regarde une autre semaine.
+    const entry = days.value.find((day) => day.index === index);
+    if (!entry || entry.date.toDateString() !== now.value.toDateString()) return null;
+
+    return days.value.indexOf(entry);
+});
+
+/** Ligne et décalage du trait d'heure, `null` hors de la plage affichée. */
+const nowMarker = computed(() => {
+    if (todayPosition.value === null) return null;
+
+    const minutes = now.value.getHours() * 60 + now.value.getMinutes() - DAY_START_MINUTES;
+    if (minutes < 0 || minutes >= SLOT_COUNT * SLOT_MINUTES) return null;
+
+    return {
+        row: Math.floor(minutes / SLOT_MINUTES) + 1 + HEADER_ROWS,
+        /** Part de la tranche déjà écoulée, de 0 à 1. */
+        offset: (minutes % SLOT_MINUTES) / SLOT_MINUTES,
+    };
+});
 </script>
 
 <template>
@@ -157,6 +203,7 @@ const dayFormatter = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "
             v-for="(day, position) in days"
             :key="day.index"
             class="grid__day"
+            :class="{ 'grid__day--today': position === todayPosition }"
             :style="{ gridColumn: position + 2 }"
         >
             <span class="grid__day-name">{{ day.name }}</span>
@@ -178,11 +225,21 @@ const dayFormatter = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "
             v-for="slot in SLOT_COUNT * days.length"
             :key="`slot-${slot}`"
             class="grid__slot"
-            :class="{ 'grid__slot--hour': (slot - 1) % SLOT_COUNT % 2 === 0 }"
+            :class="{
+                'grid__slot--hour': (slot - 1) % SLOT_COUNT % 2 === 0,
+                'grid__slot--today': Math.floor((slot - 1) / SLOT_COUNT) === todayPosition,
+            }"
             :style="{
                 gridRow: ((slot - 1) % SLOT_COUNT) + 1 + HEADER_ROWS,
                 gridColumn: Math.floor((slot - 1) / SLOT_COUNT) + 2,
             }"
+        />
+
+        <div
+            v-if="nowMarker"
+            class="grid__now"
+            :style="{ gridRow: nowMarker.row, '--offset': nowMarker.offset }"
+            aria-hidden="true"
         />
 
         <ScheduleLesson
@@ -239,6 +296,15 @@ const dayFormatter = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "
     font-weight: 600;
 }
 
+/* Aujourd'hui, et seulement dans la semaine où il tombe. */
+.grid__day--today {
+    border-bottom-color: var(--pink);
+}
+
+.grid__day--today .grid__day-name {
+    color: var(--pink);
+}
+
 .grid__day-date {
     color: var(--muted);
     font-size: var(--fs-xs);
@@ -260,6 +326,36 @@ const dayFormatter = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "
 
 .grid__slot--hour {
     border-top-color: var(--border);
+}
+
+.grid__slot--today {
+    background: color-mix(in srgb, var(--pink) 5%, var(--surface));
+}
+
+/* Trait de l'heure courante : il traverse la grille, colonne des heures
+   comprise, et passe devant les cours. Le rose n'est porté par aucun type de
+   séance : il ne peut pas se confondre avec une case. */
+.grid__now {
+    position: relative;
+    z-index: 3;
+    grid-column: 1 / -1;
+    align-self: start;
+    height: 0;
+    border-top: 2px solid var(--pink);
+    /* Le trait est ancré au début de sa tranche ; le décalage l'y fait glisser. */
+    transform: translateY(calc(var(--offset) * var(--slot-height)));
+    pointer-events: none;
+}
+
+.grid__now::before {
+    content: "";
+    position: absolute;
+    top: -4px;
+    left: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--pink);
 }
 
 /* Les cours et la trame partagent les mêmes cases : les cours passent devant */

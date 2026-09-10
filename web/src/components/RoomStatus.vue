@@ -38,11 +38,11 @@ const metaOf = (lesson: Lesson): string => {
 </script>
 
 <template>
-    <div class="room" :class="{ 'room--busy': state.busy }">
+    <div class="room" :class="{ 'room--busy': state.busy, 'room--mine': state.mine }">
         <div class="room__head">
             <span class="room__name">{{ state.room.name }}</span>
-            <Badge :variant="state.busy ? 'orange' : 'green'">
-                {{ state.busy ? "Occupée" : "Libre" }}
+            <Badge :variant="state.mine ? 'lav' : state.busy ? 'orange' : 'green'">
+                {{ state.mine ? "Mon cours" : state.busy ? "Occupée" : "Libre" }}
             </Badge>
         </div>
 
@@ -72,6 +72,12 @@ const metaOf = (lesson: Lesson): string => {
 
 .room--busy {
     border-color: color-mix(in srgb, var(--orange) 40%, var(--border));
+}
+
+/* La salle où le groupe consulté a cours : elle doit se repérer sans lire. */
+.room--mine {
+    border-color: var(--lav);
+    background: color-mix(in srgb, var(--lav) 12%, var(--surface));
 }
 
 .room__head {

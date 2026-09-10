@@ -5,8 +5,9 @@
 
 import { computed, type ComputedRef } from "vue";
 import { useCachedResource, type Freshness } from "./useCachedResource";
+import { concernsGroup } from "./groupMatch";
 import type { RoomWindow } from "./useRoomWindow";
-import type { Lesson, Room, RoomAvailability } from "../types/api";
+import type { Group, Lesson, Room, RoomAvailability } from "../types/api";
 
 /**
  * Salles physiquement identiques : si l'une est occupée, l'autre l'est aussi.
@@ -22,6 +23,8 @@ export interface RoomState {
     /** Cours occupant la salle sur le créneau, dans l'ordre chronologique. */
     lessons: Lesson[];
     busy: boolean;
+    /** Un de ces cours est celui du groupe consulté : c'est ma salle. */
+    mine: boolean;
 }
 
 export interface FloorGroup {
@@ -36,7 +39,7 @@ const FLOOR_LABELS: Record<number, string> = {
     2: "2ème étage",
 };
 
-export function useRooms(consulted: ComputedRef<RoomWindow>): {
+export function useRooms(consulted: ComputedRef<RoomWindow>, group: ComputedRef<Group | null>): {
     floors: ComputedRef<FloorGroup[]>;
     freshness: ComputedRef<Freshness>;
     updatedAt: ComputedRef<number | null>;
@@ -93,7 +96,12 @@ export function useRooms(consulted: ComputedRef<RoomWindow>): {
             const lessons = [...(lessonsByRoom.value.get(room.name) ?? [])].sort((a, b) =>
                 a.startTime.localeCompare(b.startTime),
             );
-            const state: RoomState = { room, lessons, busy: lessons.length > 0 };
+            const state: RoomState = {
+                room,
+                lessons,
+                busy: lessons.length > 0,
+                mine: lessons.some((lesson) => concernsGroup(lesson.groups, group.value)),
+            };
 
             const key = room.kind === "amphi" ? -1 : room.floor;
             const existing = byFloor.get(key);

@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import { Alert, Button, EmptyState, SectionHeader, Select, SelectOption, Skeleton, Surface } from "@gamo/ds";
+import { Alert, Button, EmptyState, SectionHeader, Skeleton, Surface } from "@gamo/ds";
 import FreshnessBadge from "../components/FreshnessBadge.vue";
+import GroupSelect from "../components/GroupSelect.vue";
 import ScheduleGrid from "../components/ScheduleGrid.vue";
-import { useCachedResource } from "../composables/useCachedResource";
+import { useGroups } from "../composables/useGroups";
 import { addDays, useSchedule } from "../composables/useSchedule";
 import { useStoredGroup } from "../composables/useStoredGroup";
-import type { Group } from "../types/api";
 
-const groups = useCachedResource<Group[]>("groups", () => "/api/v1/groups");
+const groups = useGroups();
 const selected = useStoredGroup();
 
 // Sans choix mémorisé, on propose le premier groupe plutôt qu'un écran vide
@@ -74,15 +74,7 @@ function shiftDay(delta: number): void {
             <div class="schedule__actions">
                 <FreshnessBadge :freshness="freshness" />
                 <Button ghost size="sm" @click="reload">Actualiser</Button>
-                <Select v-if="groups.data.value" v-model="selected" aria-label="Groupe">
-                    <SelectOption
-                        v-for="group in groups.data.value"
-                        :key="group.code"
-                        :value="group.code"
-                    >
-                        {{ group.label }}
-                    </SelectOption>
-                </Select>
+                <GroupSelect v-model="selected" />
             </div>
         </header>
 
