@@ -138,15 +138,18 @@ export class Importer {
         const lessons = dataSource.getRepository(Lesson);
         const dedupKey = computeDedupKey(parsed);
 
-        const existing = await lessons.findOne({ where: { dedupKey }, select: { id: true } });
-        if (existing) return { id: existing.id, created: false };
-
-        const subject = await this.upsertSubject(caches, parsed.subjectCode, parsed.subjectLabel);
-        const teacher = parsed.teacherName ? await this.upsertTeacher(caches, parsed.teacherName) : null;
-
         const rooms = parsed.roomNames
             .map((name) => caches.rooms.get(name))
             .filter((room): room is Room => room !== undefined);
+
+        const existing = await lessons.findOne({ where: { dedupKey }, relations: { rooms: true } });
+        if (existing) {
+            await this.attachMissingRooms(existing, rooms);
+            return { id: existing.id, created: false };
+        }
+
+        const subject = await this.upsertSubject(caches, parsed.subjectCode, parsed.subjectLabel);
+        const teacher = parsed.teacherName ? await this.upsertTeacher(caches, parsed.teacherName) : null;
 
         const saved = await lessons.save(
             lessons.create({
@@ -162,6 +165,24 @@ export class Importer {
         );
 
         return { id: saved.id, created: true };
+    }
+
+    /**
+     * Rattache les salles qu'un cours déjà enregistré n'a pas.
+     *
+     * L'empreinte est calculée sur ce que le document annonce, pas sur ce qui a
+     * pu être enregistré : un cours importé alors que le référentiel de salles
+     * était vide garde la même empreinte, et resterait donc sans occupation à
+     * toutes les synchronisations suivantes. Sans ce rattrapage, seule une purge
+     * de la table rendrait leurs salles à ces cours.
+     */
+    private async attachMissingRooms(lesson: Lesson, rooms: Room[]): Promise<void> {
+        const known = new Set((lesson.rooms ?? []).map((room) => room.id));
+        const missing = rooms.filter((room) => !known.has(room.id));
+        if (missing.length === 0) return;
+
+        lesson.rooms = [...(lesson.rooms ?? []), ...missing];
+        await dataSource.getRepository(Lesson).save(lesson);
     }
 
     private async upsertSubject(caches: ImportCaches, code: string, label: string): Promise<number> {
