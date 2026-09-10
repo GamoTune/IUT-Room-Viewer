@@ -4,16 +4,26 @@ import { Alert, Button, EmptyState, SectionHeader, Skeleton, Surface } from "@ga
 import FreshnessBadge from "../components/FreshnessBadge.vue";
 import RoomStatus from "../components/RoomStatus.vue";
 import { useRooms } from "../composables/useRooms";
+import {
+    DAY_START_MINUTES,
+    MAX_DURATION_MINUTES,
+    MIN_DURATION_MINUTES,
+    SLOT_MINUTES,
+    formatDuration,
+    formatTime,
+    useRoomWindow,
+} from "../composables/useRoomWindow";
 
-const { floors, freshness, updatedAt, reload, instant } = useRooms();
+const picker = useRoomWindow();
+const { floors, freshness, updatedAt, reload } = useRooms(picker.window);
 
 /** Heure affichée en tête, rafraîchie à la minute. */
-const now = ref(instant.value);
+const now = ref(new Date());
 let ticker: ReturnType<typeof setInterval> | undefined;
 
 onMounted(() => {
     ticker = setInterval(() => {
-        now.value = instant.value;
+        now.value = new Date();
     }, 30_000);
 });
 
@@ -21,15 +31,17 @@ onUnmounted(() => {
     if (ticker) clearInterval(ticker);
 });
 
-const clock = computed(() =>
-    now.value.toLocaleString("fr-FR", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        hour: "2-digit",
-        minute: "2-digit",
-    }),
+const dayLabel = computed(() =>
+    picker.day.value.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }),
 );
+
+/** Sous-titre : l'heure qui tourne en direct, le créneau choisi sinon. */
+const subtitle = computed(() => {
+    if (picker.window.value.live) {
+        return `${now.value.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })} à ${now.value.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`;
+    }
+    return `${dayLabel.value}, ${formatTime(picker.start.value)} → ${picker.endLabel.value}`;
+});
 
 const freeCount = computed(() =>
     floors.value.reduce((total, floor) => total + floor.rooms.filter((room) => !room.busy).length, 0),
@@ -40,17 +52,65 @@ const totalCount = computed(() =>
 );
 
 const loading = computed(() => totalCount.value === 0 && freshness.value === "revalidating");
+
+/** Les curseurs natifs rendent une chaîne : le composable attend des minutes. */
+const onStart = (event: Event): void => picker.setStart(Number((event.target as HTMLInputElement).value));
+const onDuration = (event: Event): void => picker.setDuration(Number((event.target as HTMLInputElement).value));
 </script>
 
 <template>
     <div class="rooms">
         <header class="rooms__header">
-            <SectionHeader title="Salles libres" :desc="clock" />
+            <SectionHeader title="Salles libres" :desc="subtitle" />
             <div class="rooms__actions">
                 <FreshnessBadge :freshness="freshness" :updated-at="updatedAt" />
                 <Button ghost size="sm" @click="reload">Actualiser</Button>
             </div>
         </header>
+
+        <Surface level="card" padding="lg" as="section" class="picker">
+            <div class="picker__day">
+                <Button ghost size="sm" @click="picker.shiftDay(-1)">← Jour précédent</Button>
+                <span class="picker__date">{{ dayLabel }}</span>
+                <Button ghost size="sm" @click="picker.shiftDay(1)">Jour suivant →</Button>
+                <Button v-if="!picker.window.value.live" ghost size="sm" @click="picker.now()">
+                    Maintenant
+                </Button>
+            </div>
+
+            <label class="picker__field">
+                <span class="picker__label">
+                    Début <strong>{{ formatTime(picker.start.value) }}</strong>
+                </span>
+                <input
+                    class="picker__slider"
+                    type="range"
+                    :min="DAY_START_MINUTES"
+                    :max="picker.maxStart.value"
+                    :step="SLOT_MINUTES"
+                    :value="picker.start.value"
+                    :aria-valuetext="formatTime(picker.start.value)"
+                    @input="onStart"
+                />
+            </label>
+
+            <label class="picker__field">
+                <span class="picker__label">
+                    Durée <strong>{{ formatDuration(picker.duration.value) }}</strong>
+                    <span class="picker__hint">jusqu'à {{ picker.endLabel.value }}</span>
+                </span>
+                <input
+                    class="picker__slider"
+                    type="range"
+                    :min="MIN_DURATION_MINUTES"
+                    :max="MAX_DURATION_MINUTES"
+                    :step="SLOT_MINUTES"
+                    :value="picker.duration.value"
+                    :aria-valuetext="formatDuration(picker.duration.value)"
+                    @input="onDuration"
+                />
+            </label>
+        </Surface>
 
         <Alert v-if="freshness === 'stale'" variant="warning">
             Les données affichées viennent du cache : le serveur n'a pas répondu.
@@ -63,6 +123,7 @@ const loading = computed(() => totalCount.value === 0 && freshness.value === "re
         <p v-if="totalCount > 0" class="rooms__summary">
             <strong>{{ freeCount }}</strong> salle{{ freeCount > 1 ? "s" : "" }} libre{{ freeCount > 1 ? "s" : "" }}
             sur {{ totalCount }}
+            <template v-if="!picker.window.value.live">sur tout le créneau</template>
         </p>
 
         <div v-if="loading" class="rooms__loading">
@@ -78,7 +139,12 @@ const loading = computed(() => totalCount.value === 0 && freshness.value === "re
         <Surface v-for="floor in floors" v-else :key="floor.label" level="card" padding="lg" as="section">
             <h2 class="rooms__floor">{{ floor.label }}</h2>
             <div class="rooms__grid">
-                <RoomStatus v-for="state in floor.rooms" :key="state.room.id" :state="state" />
+                <RoomStatus
+                    v-for="state in floor.rooms"
+                    :key="state.room.id"
+                    :state="state"
+                    :live="picker.window.value.live"
+                />
             </div>
         </Surface>
     </div>
@@ -103,6 +169,66 @@ const loading = computed(() => totalCount.value === 0 && freshness.value === "re
     display: flex;
     align-items: center;
     gap: var(--s3);
+}
+
+.picker {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s4);
+}
+
+.picker__day {
+    display: flex;
+    align-items: center;
+    gap: var(--s2);
+    flex-wrap: wrap;
+}
+
+.picker__date {
+    flex: 1;
+    min-width: 10rem;
+    text-align: center;
+    font-weight: 600;
+}
+
+.picker__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s2);
+}
+
+.picker__label {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s2);
+    color: var(--muted);
+    font-size: var(--fs-sm);
+}
+
+.picker__label strong {
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+}
+
+.picker__hint {
+    margin-left: auto;
+}
+
+/* Le design system n'a pas de curseur : celui-ci reprend ses tokens. */
+.picker__slider {
+    width: 100%;
+    height: 1.5rem;
+    margin: 0;
+    background: transparent;
+    accent-color: var(--lav);
+    cursor: pointer;
+}
+
+.picker__slider:focus-visible {
+    outline: 2px solid var(--lav);
+    outline-offset: 4px;
+    border-radius: var(--radius-sm);
 }
 
 .rooms__summary {

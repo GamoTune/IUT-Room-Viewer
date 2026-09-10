@@ -1,10 +1,11 @@
 // ============================================
 // 📁 src/composables/useRooms.ts
-// Occupation des salles à l'instant courant
+// Occupation des salles sur le créneau consulté
 // ============================================
 
-import { computed, ref, type ComputedRef, type Ref } from "vue";
+import { computed, type ComputedRef } from "vue";
 import { useCachedResource, type Freshness } from "./useCachedResource";
+import type { RoomWindow } from "./useRoomWindow";
 import type { Lesson, Room, RoomAvailability } from "../types/api";
 
 /**
@@ -18,9 +19,8 @@ const ROOM_ALIASES: Record<string, string[]> = {
 
 export interface RoomState {
     room: Room;
-    /** Cours en cours dans la salle, s'il y en a un seul d'identifiable. */
-    lesson: Lesson | null;
-    /** Plusieurs cours se chevauchent : la salle est occupée sans détail lisible. */
+    /** Cours occupant la salle sur le créneau, dans l'ordre chronologique. */
+    lessons: Lesson[];
     busy: boolean;
 }
 
@@ -36,38 +36,40 @@ const FLOOR_LABELS: Record<number, string> = {
     2: "2ème étage",
 };
 
-/**
- * Instant consulté. Par défaut l'heure courante, mais un paramètre `at` dans
- * l'URL permet de regarder un autre créneau — l'équivalent du `/salles_entre`
- * du bot, et le seul moyen de vérifier l'affichage hors des heures de cours.
- */
-function requestedInstant(): Date {
-    const raw = new URLSearchParams(window.location.search).get("at");
-    if (!raw) return new Date();
-
-    const parsed = new Date(raw);
-    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
-}
-
-export function useRooms(): {
+export function useRooms(consulted: ComputedRef<RoomWindow>): {
     floors: ComputedRef<FloorGroup[]>;
     freshness: ComputedRef<Freshness>;
-    updatedAt: Ref<number | null>;
+    updatedAt: ComputedRef<number | null>;
     reload: () => Promise<void>;
-    instant: Ref<Date>;
 } {
-    const instant = ref(requestedInstant());
-
     const rooms = useCachedResource<Room[]>("rooms", () => "/api/v1/rooms");
-    const availability = useCachedResource<RoomAvailability[]>("availability", () => {
-        const at = instant.value.toISOString();
-        return `/api/v1/rooms/availability?startTime=${at}&endTime=${at}`;
+
+    /** Requête du créneau courant. En direct, l'instant est relu à chaque appel. */
+    const path = (): string => {
+        const asked = consulted.value;
+        const from = asked.live ? new Date() : asked.from;
+        const to = asked.live ? from : asked.to;
+        return `/api/v1/rooms/availability?startTime=${from.toISOString()}&endTime=${to.toISOString()}`;
+    };
+
+    // Une instance par créneau : revenir sur un créneau déjà consulté réaffiche
+    // immédiatement son cache, au lieu d'attendre le réseau.
+    const instances = new Map<string, ReturnType<typeof useCachedResource<RoomAvailability[]>>>();
+
+    const availability = computed(() => {
+        const key = consulted.value.key;
+        const existing = instances.get(key);
+        if (existing) return existing;
+
+        const created = useCachedResource<RoomAvailability[]>(`availability:${key}`, path);
+        instances.set(key, created);
+        return created;
     });
 
     /** Les cours de chaque salle, alias appliqués. */
     const lessonsByRoom = computed(() => {
         const direct = new Map<string, Lesson[]>();
-        for (const entry of availability.data.value ?? []) {
+        for (const entry of availability.value.data.value ?? []) {
             direct.set(entry.name, entry.lessons);
         }
 
@@ -88,12 +90,10 @@ export function useRooms(): {
         for (const room of rooms.data.value ?? []) {
             if (!room.isActive) continue;
 
-            const lessons = lessonsByRoom.value.get(room.name) ?? [];
-            const state: RoomState = {
-                room,
-                lesson: lessons.length === 1 ? lessons[0]! : null,
-                busy: lessons.length > 0,
-            };
+            const lessons = [...(lessonsByRoom.value.get(room.name) ?? [])].sort((a, b) =>
+                a.startTime.localeCompare(b.startTime),
+            );
+            const state: RoomState = { room, lessons, busy: lessons.length > 0 };
 
             const key = room.kind === "amphi" ? -1 : room.floor;
             const existing = byFloor.get(key);
@@ -111,7 +111,7 @@ export function useRooms(): {
 
     // L'état le moins avancé des deux requêtes décrit l'écran
     const freshness = computed<Freshness>(() => {
-        const states = [rooms.freshness.value, availability.freshness.value];
+        const states = [rooms.freshness.value, availability.value.freshness.value];
         if (states.includes("error")) return "error";
         if (states.includes("revalidating")) return "revalidating";
         if (states.includes("stale")) return "stale";
@@ -119,9 +119,13 @@ export function useRooms(): {
     });
 
     const reload = async (): Promise<void> => {
-        instant.value = requestedInstant();
-        await Promise.all([rooms.reload(), availability.reload()]);
+        await Promise.all([rooms.reload(), availability.value.reload()]);
     };
 
-    return { floors, freshness, updatedAt: availability.updatedAt, reload, instant };
+    return {
+        floors,
+        freshness,
+        updatedAt: computed(() => availability.value.updatedAt.value),
+        reload,
+    };
 }
