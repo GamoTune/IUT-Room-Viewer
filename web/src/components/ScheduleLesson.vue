@@ -49,6 +49,9 @@ function isSae(code: string): boolean {
 }
 
 const rooms = computed(() => course.rooms.join(", "));
+
+/** `OTHER` couvre ce que l'IUT ne qualifie pas : mieux vaut ne rien afficher. */
+const type = computed(() => (course.type && course.type !== "OTHER" ? course.type : null));
 </script>
 
 <template>
@@ -57,7 +60,10 @@ const rooms = computed(() => course.rooms.join(", "));
         :class="[`lesson--${accent}`, { 'lesson--tight': span < 2 }]"
         :title="`${course.code} · ${course.title} · ${hours}${rooms ? ` · ${rooms}` : ''}`"
     >
-        <span class="lesson__code">{{ course.code }}</span>
+        <span class="lesson__head">
+            <span class="lesson__code">{{ course.code }}</span>
+            <span v-if="type" class="lesson__type">{{ type }}</span>
+        </span>
         <span v-if="showTitle" class="lesson__title">{{ course.title }}</span>
         <span v-if="showMeta" class="lesson__meta">
             <span v-if="rooms" class="lesson__room">{{ rooms }}</span>
@@ -107,9 +113,26 @@ const rooms = computed(() => course.rooms.join(", "));
     --accent: var(--yellow);
 }
 
+.lesson__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--s2);
+}
+
 .lesson__code {
     font-family: var(--font-mono);
     font-weight: 600;
+}
+
+/* Le type reprend l'accent de la case : la couleur et le texte disent la même
+   chose, l'un pour le coup d'œil, l'autre pour la certitude. */
+.lesson__type {
+    flex-shrink: 0;
+    color: var(--accent);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
 }
 
 .lesson__title {

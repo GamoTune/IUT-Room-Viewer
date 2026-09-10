@@ -17,6 +17,12 @@ const until = computed(() => {
 
 const groups = computed(() => (state.lesson ? formatGroups(state.lesson.groups) : ""));
 
+/** `OTHER` couvre ce que l'IUT ne qualifie pas : mieux vaut ne rien afficher. */
+const type = computed(() => {
+    const value = state.lesson?.type;
+    return value && value !== "OTHER" ? value : null;
+});
+
 /**
  * Certains cours n'ont pas d'intitulé distinct de leur code : le répéter
  * n'apporterait rien.
@@ -38,7 +44,10 @@ const title = computed(() => {
         </div>
 
         <p v-if="state.lesson" class="room__detail">
-            <span class="room__code">{{ state.lesson.contentCode }}</span>
+            <span class="room__subject">
+                <span class="room__code">{{ state.lesson.contentCode }}</span>
+                <span v-if="type" class="room__type">{{ type }}</span>
+            </span>
             <span v-if="title">{{ title }}</span>
             <span class="room__meta">
                 {{ [state.lesson.teacher, groups].filter(Boolean).join(" · ") }}
@@ -92,9 +101,25 @@ const title = computed(() => {
     color: var(--muted);
 }
 
+.room__subject {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s2);
+}
+
 .room__code {
     font-family: var(--font-mono);
     font-weight: 600;
+}
+
+.room__type {
+    padding: 0 var(--s1);
+    border-radius: var(--radius-sm);
+    background: var(--surface-hover);
+    color: var(--muted);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
 }
 
 .room__meta {
