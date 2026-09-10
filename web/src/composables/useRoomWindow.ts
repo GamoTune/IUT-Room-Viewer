@@ -10,9 +10,9 @@ export const DAY_START_MINUTES = 8 * 60;
 export const DAY_END_MINUTES = 20 * 60;
 export const SLOT_MINUTES = 30;
 
-/** Durées proposées : d'une demi-heure à quatre heures. */
+/** Durées proposées : d'une demi-heure à huit heures. */
 export const MIN_DURATION_MINUTES = SLOT_MINUTES;
-export const MAX_DURATION_MINUTES = 4 * 60;
+export const MAX_DURATION_MINUTES = 8 * 60;
 
 export interface RoomWindow {
     from: Date;
