@@ -16,7 +16,7 @@ const page = computed(() => PAGES[current.value]);
 
 <template>
     <!-- Calque décoratif : il se place derrière le contenu, pas autour. -->
-    <PageBackground intensity="subtle" />
+    <PageBackground />
 
     <SiteHeader name="gamo" prefix="iut" name-href="https://gamo.one" accent="lav">
         <template #right>
