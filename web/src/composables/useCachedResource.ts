@@ -18,6 +18,13 @@ export type Freshness = "revalidating" | "fresh" | "stale" | "error";
 
 const CACHE_PREFIX = "room-viewer:";
 
+/**
+ * Racine de l'API. Vide en développement — Vite relaie `/api` vers le serveur
+ * local — et absolue en production : le front est servi par un hébergement
+ * mutualisé, qui n'exécute pas le back et ne sait pas le relayer.
+ */
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+
 interface CacheEntry<T> {
     storedAt: number;
     data: T;
@@ -71,7 +78,7 @@ export function useCachedResource<T>(key: string, path: () => string): CachedRes
         freshness.value = "revalidating";
 
         try {
-            const response = await fetch(path(), { headers: { Accept: "application/json" } });
+            const response = await fetch(API_BASE + path(), { headers: { Accept: "application/json" } });
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
             const payload = (await response.json()) as ApiResponse<T>;

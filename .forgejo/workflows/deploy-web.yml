@@ -1,0 +1,126 @@
+name: Déployer le site
+
+# Déploiement du front (`web/`) vers l'hébergement mutualisé OVH, sur tag
+# `web-v*`.
+#
+#   cd web && bun pm version minor      # ou éditer web/package.json
+#   git tag web-v0.2.0 && git push --follow-tags
+#
+# Le tag est préfixé parce que le dépôt porte trois paquets : `web-v*` ne
+# déclenche que le front, laissant `v*` disponible pour le serveur et le bot.
+#
+# Le mutualisé n'exécute ni Bun ni Node : le build a lieu ici, seul
+# `web/dist/` part. Comme pour gamo.one, tout se déroule dans un worker LXC
+# jetable créé par `ci-run` ; `ci-master` n'orchestre que l'appel.
+#
+# Le transfert passe par SFTP (lftp) et non rsync : l'hébergement mutualisé
+# n'offre pas de shell distant.
+#
+# ┌─ PRÉREQUIS CÔTÉ FORGE ─────────────────────────────────────────────────────┐
+# │ Secret  DEPLOY_HOST       → sftp.clusterXXX.hosting.ovh.net (sans schéma)  │
+# │ Secret  DEPLOY_USER       → identifiant SFTP OVH                           │
+# │ Secret  DEPLOY_PASSWORD   → mot de passe SFTP OVH                          │
+# │ Var     DEPLOY_PATH       → docroot du sous-domaine, relatif au home       │
+# │ Var     API_BASE_URL      → racine publique de l'API, sans barre finale    │
+# │                                                                            │
+# │ Le clone utilise GITHUB_TOKEN, fourni automatiquement par Forgejo.         │
+# └────────────────────────────────────────────────────────────────────────────┘
+#
+# Aucun `.htaccess` n'est nécessaire : le routage est par hash (`#/salles`), il
+# ne quitte jamais le navigateur. Une seule page est servie, `index.html`.
+#
+# `--delete` suppose un docroot dédié à ce site. Si le sous-domaine partage son
+# dossier avec autre chose, ajouter les exclusions ici, comme le fait gamo.one.
+
+on:
+  push:
+    tags:
+      - "web-v*"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: native
+    timeout-minutes: 20
+
+    steps:
+      - name: Construire et déployer depuis un worker jetable
+        env:
+          FORGE_SCHEME: ${{ vars.FORGE_SCHEME || 'http' }}
+          FORGE_HOST: ${{ vars.FORGE_HOST || '10.0.0.210:3000' }}
+          GIT_TOKEN: ${{ secrets.GIT_TOKEN || secrets.GITHUB_TOKEN }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH || 'www' }}
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+          REF: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -e
+          [ -n "$GIT_TOKEN" ]       || { echo "Secret GIT_TOKEN absent." >&2; exit 1; }
+          [ -n "$DEPLOY_HOST" ]     || { echo "Secret DEPLOY_HOST absent." >&2; exit 1; }
+          [ -n "$DEPLOY_USER" ]     || { echo "Secret DEPLOY_USER absent." >&2; exit 1; }
+          [ -n "$DEPLOY_PASSWORD" ] || { echo "Secret DEPLOY_PASSWORD absent." >&2; exit 1; }
+          # Sans elle, le site déployé interrogerait sa propre origine, où il n'y
+          # a pas d'API : autant échouer ici plutôt que dans le navigateur.
+          [ -n "$API_BASE_URL" ]    || { echo "Variable API_BASE_URL absente." >&2; exit 1; }
+
+          # L'hôte se recopie volontiers avec son schéma : `sftp://http://…` fait
+          # chercher une machine nommée « http ».
+          DEPLOY_HOST="${DEPLOY_HOST#*://}"
+          DEPLOY_HOST="${DEPLOY_HOST%%/*}"
+
+          # Résolue ici, sur l'orchestrateur : `REF` n'existe pas dans le worker.
+          EXPECTED_VERSION="${REF#web-v}"
+
+          ci-run "
+            set -e
+            git clone -c advice.detachedHead=false --depth 1 --branch '${REF}' \
+              '${FORGE_SCHEME}://${GIT_TOKEN}@${FORGE_HOST}/${REPO}.git' /work
+            cd /work
+
+            VERSION=\$(bun -e 'console.log(require(\"./web/package.json\").version)')
+            [ \"\$VERSION\" = '${EXPECTED_VERSION}' ] || {
+              echo \"Tag ${REF} incohérent avec la version \$VERSION de web/package.json\" >&2
+              exit 1
+            }
+
+            # Installation à la racine : les dépendances du front sont résolues
+            # par les workspaces Bun, pas depuis web/.
+            bun install --frozen-lockfile
+            VITE_API_BASE_URL='${API_BASE_URL}' bun --filter web build
+
+            cd web
+            test -f dist/index.html || { echo 'dist/index.html manquant' >&2; exit 1; }
+            grep -q '${API_BASE_URL}' dist/assets/*.js || {
+              echo 'La racine de l API n est pas dans le bundle : build sans VITE_API_BASE_URL ?' >&2
+              exit 1
+            }
+
+            command -v lftp >/dev/null || {
+              (apt-get update -qq && apt-get install -y -qq lftp) >/dev/null 2>&1 ||
+                { echo 'lftp indisponible dans le worker' >&2; exit 1; }
+            }
+
+            # Script de commandes en 600 : le mot de passe n'apparaît ni dans
+            # \`ps\` ni dans les journaux. \`user\` le fournit explicitement — sans
+            # lui, lftp attend une saisie que personne ne fera, et le job reste
+            # bloqué jusqu'au délai d'expiration.
+            umask 077
+            {
+              echo 'set sftp:auto-confirm yes'
+              echo 'set cmd:fail-exit yes'
+              echo 'set net:timeout 20'
+              echo 'set net:max-retries 2'
+              echo 'set net:reconnect-interval-base 5'
+              printf 'open sftp://%s\n' '${DEPLOY_HOST}'
+              printf 'user %s %s\n' '${DEPLOY_USER}' '${DEPLOY_PASSWORD}'
+              printf 'mirror --reverse --delete --verbose --exclude-glob .DS_Store dist/ %s/\n' '${DEPLOY_PATH}'
+              echo 'bye'
+            } > /tmp/deploy.lftp
+
+            # Sans entrée standard, un blocage devient une erreur immédiate.
+            lftp -f /tmp/deploy.lftp < /dev/null
+            rm -f /tmp/deploy.lftp
+          "
