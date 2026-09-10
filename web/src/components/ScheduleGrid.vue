@@ -39,14 +39,23 @@ const hourLabels = computed(() =>
     Array.from({ length: Math.ceil(SLOT_COUNT / 2) }, (_, index) => ({
         label: `${String(8 + index).padStart(2, "0")}:00`,
         row: index * 2 + 1 + HEADER_ROWS,
+        // La dernière heure n'est qu'à moitié dans la grille : sans cette borne
+        // elle créerait une ligne implicite au-delà des tranches déclarées.
+        span: Math.min(2, SLOT_COUNT - index * 2),
     })),
 );
 
-interface Placed {
+interface Slot {
     course: Course;
     day: number;
     row: number;
     span: number;
+}
+
+interface Placed extends Slot {
+    /** Position horizontale parmi les cours simultanés, et leur nombre. */
+    lane: number;
+    lanes: number;
 }
 
 /**
@@ -54,7 +63,7 @@ interface Placed {
  * hauteur des heures de début et de fin.
  */
 const placed = computed<Placed[]>(() => {
-    const result: Placed[] = [];
+    const byDay = new Map<number, Slot[]>();
 
     for (const course of courses) {
         const start = new Date(course.start_at);
@@ -72,16 +81,54 @@ const placed = computed<Placed[]>(() => {
         // Un événement qui déborde la grille (journée entière, férié) est ramené dedans
         if (row + span - 1 < 1 || row > SLOT_COUNT) continue;
 
-        result.push({
-            course,
-            day,
-            row: Math.max(1, row),
-            span: Math.min(span, SLOT_COUNT - Math.max(1, row) + 1),
-        });
+        const clamped = Math.max(1, row);
+        const slots = byDay.get(day) ?? [];
+        slots.push({ course, day, row: clamped, span: Math.min(span, SLOT_COUNT - clamped + 1) });
+        byDay.set(day, slots);
     }
 
-    return result;
+    return [...byDay.values()].flatMap(assignLanes);
 });
+
+/**
+ * Répartit les cours d'une journée en couloirs côte à côte. Sans cela, deux
+ * cours simultanés — le cas des groupes dédoublés — se recouvriraient
+ * intégralement, la grille ayant des lignes de hauteur fixe.
+ *
+ * Les couloirs sont comptés par grappe de cours qui se chevauchent de proche en
+ * proche : une collision le matin ne doit pas rétrécir l'après-midi.
+ */
+function assignLanes(slots: Slot[]): Placed[] {
+    const sorted = [...slots].sort((a, b) => a.row - b.row || b.span - a.span);
+    const result: Placed[] = [];
+
+    let cluster: Placed[] = [];
+    let clusterEnd = 0;
+    /** Ligne à laquelle chaque couloir se libère. */
+    let laneEnds: number[] = [];
+
+    const flush = (): void => {
+        for (const entry of cluster) entry.lanes = laneEnds.length;
+        result.push(...cluster);
+        cluster = [];
+        laneEnds = [];
+        clusterEnd = 0;
+    };
+
+    for (const slot of sorted) {
+        if (cluster.length > 0 && slot.row >= clusterEnd) flush();
+
+        let lane = laneEnds.findIndex((end) => end <= slot.row);
+        if (lane === -1) lane = laneEnds.length;
+        laneEnds[lane] = slot.row + slot.span;
+
+        cluster.push({ ...slot, lane, lanes: 1 });
+        clusterEnd = Math.max(clusterEnd, slot.row + slot.span);
+    }
+
+    if (cluster.length > 0) flush();
+    return result;
+}
 
 /** Colonne de grille d'un jour, en tenant compte du mode une-journée. */
 function columnOf(day: number): number {
@@ -121,7 +168,7 @@ const dayFormatter = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "
             v-for="hour in hourLabels"
             :key="hour.label"
             class="grid__hour"
-            :style="{ gridRow: `${hour.row} / span 2` }"
+            :style="{ gridRow: `${hour.row} / span ${hour.span}` }"
         >
             {{ hour.label }}
         </div>
@@ -142,9 +189,12 @@ const dayFormatter = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "
             v-for="entry in visible"
             :key="`${entry.course.code}-${entry.course.start_at}-${entry.day}`"
             :course="entry.course"
+            :span="entry.span"
             :style="{
                 gridRow: `${entry.row + HEADER_ROWS} / span ${entry.span}`,
                 gridColumn: columnOf(entry.day),
+                width: `calc(${100 / entry.lanes}% - ${entry.lanes > 1 ? '2px' : '0px'})`,
+                marginLeft: `${(100 * entry.lane) / entry.lanes}%`,
             }"
         />
     </div>
@@ -152,11 +202,22 @@ const dayFormatter = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "
 
 <style scoped>
 .grid {
+    /* Hauteur d'une tranche de trente minutes. Fixe : une heure doit occuper la
+       même hauteur partout, sinon la grille ment sur les durées. */
+    --slot-height: 1.75rem;
+
     display: grid;
     grid-template-columns: 3.5rem repeat(var(--columns), minmax(0, 1fr));
-    grid-template-rows: auto repeat(var(--slots), minmax(1.35rem, auto));
+    grid-template-rows: auto repeat(var(--slots), var(--slot-height));
     gap: 1px;
     align-items: stretch;
+}
+
+/* Une seule colonne : la place gagnée en largeur passe en hauteur. */
+@media (max-width: 700px) {
+    .grid {
+        --slot-height: 2.25rem;
+    }
 }
 
 .grid__corner {

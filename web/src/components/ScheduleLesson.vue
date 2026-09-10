@@ -2,7 +2,17 @@
 import { computed } from "vue";
 import type { Course } from "../types/api";
 
-const { course } = defineProps<{ course: Course }>();
+const { course, span } = defineProps<{
+    course: Course;
+    /** Nombre de tranches occupées : il fixe la place disponible. */
+    span: number;
+}>();
+
+// La hauteur d'une case est désormais fixe : on choisit ce qui rentre plutôt
+// que de laisser le contenu repousser la grille.
+const showMeta = computed(() => span >= 2);
+const showTitle = computed(() => span >= 3);
+const showHours = computed(() => span >= 4);
 
 const hours = computed(() => {
     const format = (value: string) =>
@@ -28,14 +38,18 @@ const rooms = computed(() => course.rooms.join(", "));
 </script>
 
 <template>
-    <article class="lesson" :class="`lesson--${accent}`">
+    <article
+        class="lesson"
+        :class="[`lesson--${accent}`, { 'lesson--tight': span < 2 }]"
+        :title="`${course.code} · ${course.title} · ${hours}${rooms ? ` · ${rooms}` : ''}`"
+    >
         <span class="lesson__code">{{ course.code }}</span>
-        <span class="lesson__title">{{ course.title }}</span>
-        <span class="lesson__meta">
+        <span v-if="showTitle" class="lesson__title">{{ course.title }}</span>
+        <span v-if="showMeta" class="lesson__meta">
             <span v-if="rooms" class="lesson__room">{{ rooms }}</span>
             <span v-if="course.teacher && course.teacher !== 'Inconnu'">{{ course.teacher }}</span>
         </span>
-        <span class="lesson__hours">{{ hours }}</span>
+        <span v-if="showHours" class="lesson__hours">{{ hours }}</span>
     </article>
 </template>
 
@@ -46,7 +60,11 @@ const rooms = computed(() => course.rooms.join(", "));
     display: flex;
     flex-direction: column;
     gap: 0.125rem;
+    /* `min-height: 0` lève le minimum implicite des éléments de grille : sans
+       lui, un contenu trop long repousserait la ligne au lieu d'être rogné. */
+    min-height: 0;
     overflow: hidden;
+    justify-self: start;
     padding: var(--s2);
     border-left: 3px solid var(--accent);
     border-radius: var(--radius-sm);
@@ -77,7 +95,17 @@ const rooms = computed(() => course.rooms.join(", "));
 }
 
 .lesson__title {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
     color: var(--text);
+}
+
+/* Une demi-heure ne laisse la place qu'au code : on lui rend ses marges. */
+.lesson--tight {
+    padding: 0 var(--s1) 0 var(--s2);
+    justify-content: center;
 }
 
 .lesson__meta,

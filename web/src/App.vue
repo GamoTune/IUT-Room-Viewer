@@ -28,7 +28,8 @@ const page = computed(() => PAGES[current.value]);
                 type="button"
                 @click="go(route)"
             >
-                {{ route === "salles" ? "Salles" : "Emploi du temps" }}
+                <span class="nav__long">{{ route === "salles" ? "Salles" : "Emploi du temps" }}</span>
+                <span class="nav__short">{{ route === "salles" ? "Salles" : "EDT" }}</span>
             </button>
         </template>
     </SiteHeader>
@@ -63,5 +64,25 @@ const page = computed(() => PAGES[current.value]);
 .nav__link--active {
     background: color-mix(in srgb, var(--lav) 18%, transparent);
     color: var(--text);
+}
+
+/* Les libellés longs débordent de l'en-tête sur un téléphone : on les abrège
+   plutôt que de les laisser rogner. */
+.nav__short {
+    display: none;
+}
+
+@media (max-width: 480px) {
+    .nav__long {
+        display: none;
+    }
+
+    .nav__short {
+        display: inline;
+    }
+
+    .nav__link {
+        padding: var(--s2);
+    }
 }
 </style>
