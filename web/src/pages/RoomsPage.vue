@@ -83,11 +83,13 @@ const durationFill = computed(() => fill(picker.duration.value, MIN_DURATION_MIN
         <Surface level="card" padding="lg" as="section" class="picker">
             <div class="picker__day">
                 <Button ghost size="sm" @click="picker.shiftDay(-1)">← Jour précédent</Button>
-                <span class="picker__date">{{ dayLabel }}</span>
+                <div class="picker__center">
+                    <span class="picker__date">{{ dayLabel }}</span>
+                    <Button v-if="!picker.window.value.live" ghost size="sm" @click="picker.now()">
+                        Maintenant
+                    </Button>
+                </div>
                 <Button ghost size="sm" @click="picker.shiftDay(1)">Jour suivant →</Button>
-                <Button v-if="!picker.window.value.live" ghost size="sm" @click="picker.now()">
-                    Maintenant
-                </Button>
             </div>
 
             <label class="picker__field">
@@ -209,10 +211,16 @@ const durationFill = computed(() => fill(picker.duration.value, MIN_DURATION_MIN
     flex-wrap: wrap;
 }
 
-.picker__date {
+.picker__center {
+    display: flex;
     flex: 1;
-    min-width: 10rem;
-    text-align: center;
+    align-items: center;
+    justify-content: center;
+    gap: var(--s3);
+    flex-wrap: wrap;
+}
+
+.picker__date {
     font-weight: 600;
 }
 

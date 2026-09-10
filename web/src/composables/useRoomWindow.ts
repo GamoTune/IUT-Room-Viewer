@@ -45,6 +45,10 @@ function currentSlot(): number {
     return Math.min(Math.max(floored, DAY_START_MINUTES), DAY_END_MINUTES - MIN_DURATION_MINUTES);
 }
 
+function isToday(day: Date): boolean {
+    return day.getTime() === startOfDay(new Date()).getTime();
+}
+
 function startOfDay(date: Date): Date {
     const copy = new Date(date);
     copy.setHours(0, 0, 0, 0);
@@ -75,8 +79,15 @@ export function useRoomWindow(): {
     const start = ref(currentSlot());
     const duration = ref(2 * 60);
 
-    // On interroge l'instant présent tant que l'utilisateur n'a rien choisi.
-    const live = ref(true);
+    /** `true` dès qu'un curseur a bougé : le créneau ne suit plus l'heure. */
+    const slotChosen = ref(false);
+
+    /**
+     * On interroge l'instant présent tant que l'affichage n'a pas été détourné.
+     * Le calcul, plutôt qu'un drapeau posé une fois pour toutes, fait que
+     * revenir sur aujourd'hui par les flèches rebascule en direct.
+     */
+    const live = computed(() => isToday(day.value) && !slotChosen.value);
 
     const maxStart = computed(() => DAY_END_MINUTES - duration.value);
     const endLabel = computed(() => formatTime(Math.min(start.value + duration.value, DAY_END_MINUTES)));
@@ -98,26 +109,25 @@ export function useRoomWindow(): {
         Math.min(Math.max(minutes, DAY_START_MINUTES), DAY_END_MINUTES - duration.value);
 
     const setStart = (minutes: number): void => {
-        live.value = false;
+        slotChosen.value = true;
         start.value = clampStart(minutes);
     };
 
     /** Allonger le créneau près de la fin de journée recule son début plutôt que de le tronquer. */
     const setDuration = (minutes: number): void => {
-        live.value = false;
+        slotChosen.value = true;
         duration.value = Math.min(Math.max(minutes, MIN_DURATION_MINUTES), MAX_DURATION_MINUTES);
         start.value = clampStart(start.value);
     };
 
     const shiftDay = (delta: number): void => {
-        live.value = false;
         const next = new Date(day.value);
         next.setDate(next.getDate() + delta);
         day.value = next;
     };
 
     const now = (): void => {
-        live.value = true;
+        slotChosen.value = false;
         day.value = startOfDay(new Date());
         start.value = currentSlot();
         duration.value = 2 * 60;

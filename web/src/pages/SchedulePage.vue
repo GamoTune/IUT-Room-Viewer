@@ -20,7 +20,7 @@ watch(
     { immediate: true },
 );
 
-const { courses, freshness, monday, previousWeek, nextWeek, thisWeek } = useSchedule(selected);
+const { courses, freshness, monday, previousWeek, nextWeek, thisWeek, reload } = useSchedule(selected);
 
 /** En dessous de cette largeur, six colonnes deviennent illisibles. */
 const WIDE_ENOUGH = 700;
@@ -73,6 +73,7 @@ function shiftDay(delta: number): void {
             <SectionHeader title="Emploi du temps" :desc="wide ? weekLabel : dayLabel" />
             <div class="schedule__actions">
                 <FreshnessBadge :freshness="freshness" />
+                <Button ghost size="sm" @click="reload">Actualiser</Button>
                 <Select v-if="groups.data.value" v-model="selected" aria-label="Groupe">
                     <SelectOption
                         v-for="group in groups.data.value"
