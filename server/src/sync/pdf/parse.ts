@@ -10,7 +10,7 @@ import type { ParsedLesson } from "../types.js";
 import { buildCells, type Cell } from "./cells.js";
 import { readPage } from "./geometry.js";
 import { buildBands, calibrateTime, xToMinutes, DAY_LABELS, type Band, type TimeScale } from "./grid.js";
-import { readCell } from "./content.js";
+import { isSaeCode, readCell, type CellContent } from "./content.js";
 
 /** En-tête du document : semaine et dates réelles. */
 export interface TimetableHeader {
@@ -76,7 +76,7 @@ export async function parseTimetable(data: Uint8Array, year: Year): Promise<Pars
         lessons.push({
             start: parisToUtc(date, 8 * 60 + start),
             end: parisToUtc(date, 8 * 60 + end),
-            type: content.type === "OTHER" ? inferType(cell, covered, groupCodes) : content.type,
+            type: resolveType(content, cell, covered, groupCodes),
             subjectCode: content.subjectCode,
             subjectLabel: content.subjectLabel || content.subjectCode,
             teacherName: content.teacherName,
@@ -95,6 +95,20 @@ export async function parseTimetable(data: Uint8Array, year: Year): Promise<Pars
         unknownRooms: [...unknownRooms],
         calibrationError: scale.maxErrorMinutes,
     };
+}
+
+/**
+ * Type d'un créneau. Une SAÉ n'est ni un CM, ni un TD, ni un TP : la déduire de
+ * la portée de sa case l'aurait rangée en TD, ce que le document ne dit pas.
+ */
+function resolveType(
+    content: CellContent,
+    cell: Cell,
+    covered: Band[],
+    groupCodes: string[],
+): ParsedLesson["type"] {
+    if (isSaeCode(content.subjectCode)) return "SAE";
+    return content.type === "OTHER" ? inferType(cell, covered, groupCodes) : content.type;
 }
 
 /**

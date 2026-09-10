@@ -8,10 +8,12 @@ export const YEARS = ["A1", "A2", "A3"] as const;
 export type Year = (typeof YEARS)[number];
 
 /**
- * Types de cours. `Cours` dans les documents correspond à un CM ;
+ * Types de cours. `Cours` dans les documents correspond à un CM ; `SAE` couvre
+ * les situations d'apprentissage et d'évaluation, qui ne sont ni cours, ni TD,
+ * ni TP — le plus souvent du travail encadré sans enseignant désigné.
  * `OTHER` accueille ce que l'IUT publiera en cours d'année (examens, soutenances).
  */
-export const LESSON_TYPES = ["CM", "TD", "TP", "OTHER"] as const;
+export const LESSON_TYPES = ["CM", "TD", "TP", "SAE", "OTHER"] as const;
 export type LessonType = (typeof LESSON_TYPES)[number];
 
 /** Catégories de salles, pour l'affichage groupé par étage. */

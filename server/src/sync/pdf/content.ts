@@ -37,6 +37,15 @@ const TYPE_MAP: Record<string, LessonType> = {
 const SUBJECT_CODE = /^[RS]\d[A-Z]?\.[A-Za-z0-9]{2,3}$/;
 
 /**
+ * Une SAÉ se distingue d'une ressource par son préfixe : `S5A.01` contre
+ * `R5A.04`. C'est le seul marqueur fiable — le document ne qualifie pas ces
+ * créneaux, et certains portent malgré tout un enseignant.
+ */
+export function isSaeCode(code: string): boolean {
+    return code.startsWith("S");
+}
+
+/**
  * Lit une case, quelle que soit sa forme.
  *
  * Les documents mélangent deux présentations :

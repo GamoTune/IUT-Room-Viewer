@@ -22,16 +22,15 @@ const hours = computed(() => {
 
 /**
  * Code couleur repris de l'emploi du temps publié par l'IUT, transposé sur les
- * accents du design system. La nature de la matière prime sur le type de
- * séance : une SAÉ reste verte même quand elle est programmée en TD.
+ * accents du design system.
  *
  * Le design system n'a pas de rouge ; son orange en tient lieu, c'est aussi la
  * couleur qu'il donne au rôle `danger`.
  */
 const accent = computed(() => {
-    if (isSae(course.code)) return "green";
-
     switch (course.type) {
+        case "SAE":
+            return "green";
         case "CM":
             return "yellow";
         case "TD":
@@ -42,11 +41,6 @@ const accent = computed(() => {
             return "lav";
     }
 });
-
-/** Les SAÉ se distinguent des ressources par leur préfixe : `S5A.01` contre `R5A.04`. */
-function isSae(code: string): boolean {
-    return code.startsWith("S");
-}
 
 const rooms = computed(() => course.rooms.join(", "));
 
