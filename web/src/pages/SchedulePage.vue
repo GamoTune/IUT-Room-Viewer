@@ -123,7 +123,7 @@ function shiftDay(delta: number): void {
 .schedule {
     display: flex;
     flex-direction: column;
-    gap: var(--s4);
+    gap: var(--s6);
 }
 
 .schedule__header {

@@ -75,7 +75,7 @@ const loading = computed(() => totalCount.value === 0 && freshness.value === "re
             description="Le référentiel des salles est vide : la base n'a pas encore été alimentée."
         />
 
-        <Surface v-for="floor in floors" v-else :key="floor.label" level="card" padding="md" as="section">
+        <Surface v-for="floor in floors" v-else :key="floor.label" level="card" padding="lg" as="section">
             <h2 class="rooms__floor">{{ floor.label }}</h2>
             <div class="rooms__grid">
                 <RoomStatus v-for="state in floor.rooms" :key="state.room.id" :state="state" />
@@ -88,7 +88,7 @@ const loading = computed(() => totalCount.value === 0 && freshness.value === "re
 .rooms {
     display: flex;
     flex-direction: column;
-    gap: var(--s4);
+    gap: var(--s6);
 }
 
 .rooms__header {
@@ -111,7 +111,7 @@ const loading = computed(() => totalCount.value === 0 && freshness.value === "re
 }
 
 .rooms__floor {
-    margin: 0 0 var(--s3);
+    margin: 0 0 var(--s4);
     font-size: var(--fs-lg);
     font-weight: 600;
 }
@@ -119,11 +119,11 @@ const loading = computed(() => totalCount.value === 0 && freshness.value === "re
 .rooms__grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
-    gap: var(--s3);
+    gap: var(--s4);
 }
 
 .rooms__loading {
     display: grid;
-    gap: var(--s3);
+    gap: var(--s4);
 }
 </style>

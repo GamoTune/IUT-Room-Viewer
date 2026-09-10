@@ -57,7 +57,7 @@ const title = computed(() => {
     display: flex;
     flex-direction: column;
     gap: var(--s2);
-    padding: var(--s3);
+    padding: var(--s4);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
     background: var(--surface);

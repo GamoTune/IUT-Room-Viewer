@@ -18,7 +18,7 @@ const page = computed(() => PAGES[current.value]);
     <!-- Calque décoratif : il se place derrière le contenu, pas autour. -->
     <PageBackground intensity="subtle" />
 
-    <SiteHeader name="Salles IUT" prefix="iut." prefix-href="" accent="lav">
+    <SiteHeader name="Salles IUT" prefix="iut." name-href="https://gamo.one" accent="lav">
         <template #right>
             <button
                 v-for="route in ROUTES"
@@ -42,7 +42,7 @@ const page = computed(() => PAGES[current.value]);
 .page {
     width: min(72rem, 100%);
     margin: 0 auto;
-    padding: var(--s5) var(--s4) var(--s10);
+    padding: var(--s8) var(--s5) var(--s12);
 }
 
 .nav__link {
