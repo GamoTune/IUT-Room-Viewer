@@ -3,7 +3,19 @@
 // Extraction du texte et des traits d'un PDF, en coordonnées d'affichage
 // ============================================
 
+import { createRequire } from "node:module";
+import path from "node:path";
 import { getDocument, OPS } from "pdfjs-dist/legacy/build/pdf.mjs";
+
+/**
+ * Polices standard livrées avec pdfjs. Elles ne servent qu'au rendu, dont on
+ * n'a que faire ici, mais sans ce chemin la bibliothèque avertit à chaque
+ * document — neuf lignes de bruit à chaque synchronisation.
+ */
+const STANDARD_FONTS = path.join(
+    path.dirname(createRequire(import.meta.url).resolve("pdfjs-dist/package.json")),
+    "standard_fonts/",
+);
 
 /**
  * Un fragment de texte, positionné dans le repère d'affichage :
@@ -75,6 +87,7 @@ export async function readPage(data: Uint8Array, pageNumber = 1): Promise<PageGe
         // Aucune police n'est rendue : on n'a besoin que des positions.
         isEvalSupported: false,
         useSystemFonts: false,
+        standardFontDataUrl: STANDARD_FONTS,
     }).promise;
 
     const page = await doc.getPage(pageNumber);
