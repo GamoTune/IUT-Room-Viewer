@@ -1,0 +1,18 @@
+[test]
+coverage = true
+coverageReporter = ["text"]
+coverageSkipTestFiles = true
+
+# Le rapport porte sur le code qui contient de la logique. Les entités ne sont
+# que des décorateurs, les types disparaissent à la compilation, et les routes
+# comme le CLI ne font que déléguer.
+coveragePathIgnorePatterns = [
+    "**/entities/**",
+    "**/types/**",
+    "**/migrations/**",
+    "**/api/**",
+    "**/cli/**",
+    "**/tests/**",
+    "**/src/index.ts",
+    "**/utils/dataSource.ts",
+]
