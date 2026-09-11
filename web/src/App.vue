@@ -41,7 +41,9 @@ const page = computed(() => PAGES[current.value]);
 
 <style scoped>
 .page {
-    width: min(72rem, 100%);
+    /* Large : la grille de l'emploi du temps a six colonnes, et les salles se
+       rangent d'autant mieux qu'elles ont de la place. */
+    width: min(90rem, 100%);
     margin: 0 auto;
     padding: var(--s8) var(--s5) var(--s12);
 }
