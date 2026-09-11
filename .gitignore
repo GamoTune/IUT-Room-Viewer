@@ -74,6 +74,8 @@ web_modules/
 
 # dotenv environment variable files
 .env
+# Identifiants de déploiement : locaux à la machine, jamais versionnés.
+.env.deploy
 .env.development.local
 .env.test.local
 .env.production.local
