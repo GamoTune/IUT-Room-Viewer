@@ -15,6 +15,17 @@ describe("isSaeCode", () => {
         expect(isSaeCode("R5A.04")).toBe(false);
         expect(isSaeCode("P1.02")).toBe(false);
     });
+
+    it("écarte une mention administrative commençant par S", () => {
+        // `SCO` est la scolarité, pas une SAÉ : le chiffre fait la différence.
+        expect(isSaeCode("SCO")).toBe(false);
+        expect(isSaeCode("STAGE")).toBe(false);
+    });
+
+    it("accepte les deux formes de code de SAÉ", () => {
+        expect(isSaeCode("S5A.01")).toBe(true);
+        expect(isSaeCode("S3.St")).toBe(true);
+    });
 });
 
 describe("readCell — forme compacte", () => {

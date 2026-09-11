@@ -1,7 +1,10 @@
 [test]
 coverage = true
-coverageReporter = ["text"]
+coverageReporter = ["text", "lcov"]
 coverageSkipTestFiles = true
+
+# Pas de `coverageThreshold` ici : Bun 1.3 l'accepte sans l'appliquer — ni
+# message, ni code de sortie. Le seuil est vérifié par `bun run coverage`.
 
 # Le rapport porte sur le code qui contient de la logique. Les entités ne sont
 # que des décorateurs, les types disparaissent à la compilation, et les routes

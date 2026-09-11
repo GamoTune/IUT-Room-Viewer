@@ -45,7 +45,9 @@ const SUBJECT_CODE = /^[RS]\d[A-Z]?\.[A-Za-z0-9]{2,3}$/;
  * `R` : leur type se déduit normalement de la portée de la case.
  */
 export function isSaeCode(code: string): boolean {
-    return code.startsWith("S");
+    // Le chiffre est indispensable : sans lui, les mentions administratives
+    // — `SCO` pour la scolarité — passeraient pour des SAÉ.
+    return /^S\d/.test(code);
 }
 
 /**

@@ -9,7 +9,11 @@
     "db:migrate": "bun node_modules/typeorm/cli.js migration:run -d src/utils/dataSource.ts",
     "db:revert": "bun node_modules/typeorm/cli.js migration:revert -d src/utils/dataSource.ts",
     "db:seed": "bun src/cli/seed.ts",
-    "sync": "bun src/cli/sync.ts"
+    "sync": "bun src/cli/sync.ts",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.test.json",
+    "coverage": "bun scripts/coverage.ts"
   },
   "dependencies": {
     "dotenv": "^16.6.1",
