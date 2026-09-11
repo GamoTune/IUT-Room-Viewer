@@ -93,8 +93,10 @@ app.get("/", (_req, res) => {
             health: "/health",
             v1: {
                 rooms: "/api/v1/rooms",
-                sync: "/api/v1/sync",
+                availability: "/api/v1/rooms/availability",
+                groups: "/api/v1/groups",
                 schedule: "/api/v1/schedule",
+                sync: "/api/v1/sync",
                 stats: "/api/v1/stats",
             },
             v2: {

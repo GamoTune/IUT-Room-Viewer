@@ -1,112 +1,149 @@
 # 🏫 IUT Room Viewer
 
-> Visualisez en temps réel la disponibilité des salles du département informatique de l'IUT du Limousin.
+> Quelles salles sont libres, maintenant, au département informatique de l'IUT du Limousin.
 
-[![Version](https://img.shields.io/badge/version-4.0.0-blue.svg)](https://github.com/GamoTune/IUT-Room-Viewer)
-[![Bun](https://img.shields.io/badge/Bun-1.0+-black.svg)](https://bun.sh)
+[![Bun](https://img.shields.io/badge/Bun-1.x-black.svg)](https://bun.sh)
+[![TypeORM](https://img.shields.io/badge/TypeORM-1.x-fe0803.svg)](https://typeorm.io)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-336791.svg)](https://www.postgresql.org)
 [![Discord.js](https://img.shields.io/badge/Discord.js-v14-5865F2.svg)](https://discord.js.org)
-[![Prisma](https://img.shields.io/badge/Prisma-7.x-2D3748.svg)](https://prisma.io)
+
+Trois façons de consulter la même donnée :
+
+| | |
+| --- | --- |
+| 🌐 **Site** | [iut.gamo.one](https://iut.gamo.one) — salles libres et emplois du temps |
+| 🤖 **Bot Discord** | [Ajouter au serveur](https://discord.com/oauth2/authorize?client_id=1331626843257966613&permissions=2147485696&integration_type=0&scope=bot) · [en intégration personnelle](https://discord.com/oauth2/authorize?client_id=1331626843257966613) |
+| 🔌 **API REST** | [`/docs`](https://iut-room-viewer.gamo.one/docs) — ouverte, sans authentification |
 
 ---
 
-## 📋 Description
+## D'où viennent les données
 
-IUT Room Viewer est une application complète combinant :
-- **Une API REST** pour récupérer les données de disponibilité des salles
-- **Un bot Discord** pour consulter ces informations facilement
-- **Un système de synchronisation automatique** des emplois du temps
+Des emplois du temps **de promotion** publiés en PDF par l'IUT (`A1_S1.pdf`), relus
+toutes les dix minutes. Ils sont lus directement : positions du texte, traits et
+cases peintes, sans dépendance à un service tiers.
+
+**Les autres sources publiées par l'IUT ne sont pas exploitées.** Les fichiers par
+groupe et les `.ics` contiennent des attributions de groupe fausses et des cours
+manquants — vérifié à plusieurs reprises contre la réalité du terrain. Ils sont
+tout de même téléchargés et archivés une fois par jour, pour constater le jour où
+l'IUT les corrigera.
+
+Conséquence à connaître : les documents n'écrivent pas le type de séance. Il est
+déduit de la portée de la case — un cours couvrant toute une promotion est un CM,
+un groupe entier un TD, un demi-groupe un TP. Les SAÉ se reconnaissent au préfixe
+de leur code (`S5A.01`).
 
 ---
 
-## 🚀 Utilisation rapide
+## 🔌 API REST
 
-### 🤖 Bot Discord
+Base : `https://iut-room-viewer.gamo.one` · Documentation interactive :
+[`/docs/v1`](https://iut-room-viewer.gamo.one/docs/v1) et
+[`/docs/v2`](https://iut-room-viewer.gamo.one/docs/v2).
 
-| Type | Lien |
-|------|------|
-| **Bot pour serveurs** | [Ajouter Salles IUT](https://discord.com/oauth2/authorize?client_id=1331626843257966613&permissions=2147485696&integration_type=0&scope=bot) |
-| **Intégration utilisateur** | [IUT-Room-viewer](https://discord.com/oauth2/authorize?client_id=1331626843257966613) |
+**La lecture est libre**, sans clé ni quota. Toutes les dates sont en UTC (`Z`) ;
+les emplois du temps sont publiés en heure de Paris et convertis à la lecture,
+changements d'heure compris.
 
-### 💬 Commandes Discord
+### Les routes
+
+| Méthode | Route | Clé | Ce qu'elle rend |
+| --- | --- | :-: | --- |
+| `GET` | `/health` | | État du service |
+| `GET` | `/api/v1/rooms` | | Le référentiel des salles |
+| `GET` | `/api/v1/rooms/availability` | | Les salles **et** ce qui les occupe sur une période |
+| `GET` | `/api/v1/groups` | | Les groupes publiés par l'IUT |
+| `GET` | `/api/v1/schedule` | | L'emploi du temps d'un groupe, pour une journée |
+| `GET` | `/api/v2/courses` | | Les cours d'une période, filtrables |
+| `GET` | `/api/v1/sync/status` | | Où en est la synchronisation |
+| `POST` | `/api/v1/sync/trigger` | 🔐 | Déclenche une synchronisation |
+| `POST` | `/api/v1/sync/reset` | 🔐 | Reprend tout, en ignorant le cache |
+| `POST` | `/api/v1/stats/log` | 🔐 | Journalise une commande du bot |
+
+🔐 En-tête `X-API-Key`. Ces routes écrivent : elles ne servent pas à consulter.
+
+### Quelles salles sont libres maintenant
+
+`availability` rend **toutes** les salles, y compris libres — une salle sans cours
+porte une liste `lessons` vide. Un instant se demande en donnant deux fois la même
+date :
+
+```bash
+NOW=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
+curl -s "https://iut-room-viewer.gamo.one/api/v1/rooms/availability?startTime=$NOW&endTime=$NOW" \
+  | jq -r '.data[] | select(.lessons | length == 0) | .name'
+```
+
+Sur une vraie plage, un cours est retenu dès qu'il la chevauche : les salles dont
+`lessons` reste vide sont donc libres sur **toute** la plage.
+
+> `R46` et `R47` sont physiquement les mêmes locaux : un cours dans l'une occupe
+> l'autre. L'API les rend séparément, au client de les fusionner.
+
+### L'emploi du temps d'un groupe
+
+```bash
+curl -s "https://iut-room-viewer.gamo.one/api/v2/courses\
+?start_at=2026-09-07T00:00:00.000Z\
+&end_at=2026-09-14T00:00:00.000Z\
+&groups=G8a" | jq '.data[0]'
+```
+
+```json
+{
+  "code": "R5A.14",
+  "title": "Anglais",
+  "type": "TP",
+  "rooms": ["R52"],
+  "groups": ["G8A"],
+  "teacher": "JP",
+  "start_at": "2026-09-10T09:30:00.000Z",
+  "end_at": "2026-09-10T11:30:00.000Z"
+}
+```
+
+Trois choses à savoir :
+
+- **Ne codez pas les groupes en dur** : `/api/v1/groups` les liste, et ils changent
+  d'une année à l'autre.
+- Un filtre `groups` rend aussi les cours de niveau supérieur — demander `G8a`
+  retourne ses TP, les TD de `G8` et les CM de sa promotion.
+- La fenêtre retient les cours **entièrement contenus** : demandez la semaine
+  plutôt que la journée pour ne rien manquer aux bords.
+
+### v1 ou v2 ?
+
+La v1 rend les cours *par salle*, avec des groupes numériques
+(`{ mainGroup: -1, subGroup: -1 }` pour une promotion) qu'il faut savoir lire. La
+v2 rend une liste de cours déjà lisibles. **Pour afficher un emploi du temps,
+prenez la v2** ; pour l'occupation des salles, la v1 est la seule.
+
+Les deux répondent sous la même enveloppe :
+
+```json
+{ "success": true, "data": [] }
+{ "success": false, "error": "Les paramètres start_at et end_at sont requis" }
+```
+
+---
+
+## 🤖 Commandes Discord
 
 | Commande | Description |
-|----------|-------------|
-| `/help` | Affiche l'aide sur les commandes disponibles |
-| `/salles_maintenant` | Affiche l'état actuel de toutes les salles |
-| `/salles_entre` | Affiche l'état des salles entre deux horaires |
+| --- | --- |
+| `/help` | L'aide |
+| `/salles_maintenant` | L'état de toutes les salles à l'instant |
+| `/salles_entre` | L'état des salles entre deux horaires |
+| `/edt_prof` | Les cours d'un enseignant |
 
-#### Options de `/salles_entre`
+`/salles_entre` prend `heure_début` et `heure_fin` (obligatoires), plus
+`minute_debut`, `minute_fin`, `jour`, `mois` et `année` pour viser un autre moment
+qu'aujourd'hui.
 
-| Option | Type | Requis | Description |
-|--------|------|--------|-------------|
-| `heure_début` | Entier | ✅ | Heure de début |
-| `heure_fin` | Entier | ✅ | Heure de fin |
-| `minute_debut` | Entier | ❌ | Minute de début (défaut: 0) |
-| `minute_fin` | Entier | ❌ | Minute de fin (défaut: 0) |
-| `jour` | Entier | ❌ | Jour (défaut: aujourd'hui) |
-| `mois` | Entier | ❌ | Mois (défaut: mois actuel) |
-| `année` | Entier | ❌ | Année (défaut: année actuelle) |
-
----
-
-## 🌐 API REST
-
-L'API REST permet d'accéder aux données des salles de manière programmatique.
-
-### Endpoints disponibles
-
-#### 📍 Informations générales
-
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| `GET` | `/` | Informations sur l'API (version, endpoints) |
-| `GET` | `/health` | Vérification de l'état du serveur |
-
-#### 🏠 Salles
-
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| `GET` | `/api/v1/rooms` | Liste toutes les salles |
-| `GET` | `/api/v1/rooms/availability` | Disponibilité des salles sur une plage horaire |
-
-**Paramètres de `/api/v1/rooms/availability` :**
-
-| Paramètre | Type | Requis | Description |
-|-----------|------|--------|-------------|
-| `startTime` | ISO 8601 | ✅ | Date/heure de début |
-| `endTime` | ISO 8601 | ✅ | Date/heure de fin |
-
-**Exemple :**
-```bash
-GET /api/v1/rooms/availability?startTime=2025-01-04T08:00:00&endTime=2025-01-04T12:00:00
-```
-
-#### 🔄 Synchronisation
-
-| Méthode | Endpoint | Auth | Description |
-|---------|----------|------|-------------|
-| `GET` | `/api/v1/sync/status` | ❌ | Statut de la dernière synchronisation |
-| `POST` | `/api/v1/sync/trigger` | 🔐 | Déclenche une synchronisation manuelle |
-| `POST` | `/api/v1/sync/reset` | 🔐 | Réinitialise et resynchronise les données |
-
-> 🔐 Les routes protégées nécessitent une clé API via le header `X-API-Key`
-
-### Format de réponse
-
-```json
-{
-  "success": true,
-  "data": [...]
-}
-```
-
-En cas d'erreur :
-```json
-{
-  "success": false,
-  "error": "Message d'erreur"
-}
-```
+`/edt_prof` demande le nom **et** le code de l'enseignant (`Thomas Hugel` et `TH`) :
+les documents de l'IUT emploient les deux sans lien entre eux, l'API réunit ce qui
+correspond.
 
 ---
 
@@ -114,149 +151,136 @@ En cas d'erreur :
 
 ### Prérequis
 
-- [Bun](https://bun.sh) (v1.0+)
-- [MariaDB](https://mariadb.org/) ou MySQL
-- Compte développeur Discord
-
-### Installation
+- [Bun](https://bun.sh) 1.x
+- [PostgreSQL](https://www.postgresql.org) 16+
+- Une application Discord, pour le bot
 
 ```bash
-# Cloner le repository
 git clone https://github.com/GamoTune/IUT-Room-Viewer.git
 cd IUT-Room-Viewer
-
-# Installer les dépendances (workspaces)
 bun install
+```
 
-# Générer les clients Prisma
-bun run generate
+### Base de données
+
+Une seule base pour tout le projet :
+
+```sql
+CREATE ROLE iut_room_viewer WITH LOGIN PASSWORD 'un-mot-de-passe';
+CREATE DATABASE iut_room_viewer OWNER iut_room_viewer;
 ```
 
 ### Configuration
 
-Créez un fichier `.env` dans chaque sous-projet :
+Chaque paquet a son modèle, à copier et renseigner :
 
-#### `server/.env`
-```env
-# Base de données EDT
-DATABASE_URL_EDT="mysql://user:password@localhost:3306/iut_edt"
-
-# Base de données Stats
-DATABASE_URL_STATS="mysql://user:password@localhost:3306/iut_stats"
-
-# API
-PORT=3000
-API_KEY="votre-cle-api-secrete"
-VERSION="4.0.0"
+```bash
+cp server/.env.example server/.env
+cp web/.env.example web/.env          # facultatif en développement
 ```
 
-#### `bot/.env`
+`server/.env` demande au minimum `DATABASE_URL` et `API_SECRET_KEY`. Pour le bot,
+créer `bot/.env` :
+
 ```env
-TOKEN="votre-token-discord-bot"
-CLIENT_ID="id-de-votre-application-discord"
-VERSION="4.0.0"
-API_URL="http://localhost:3000"
+TOKEN="le-jeton-du-bot"
+CLIENT_ID="l-identifiant-de-l-application"
+API_URL="http://localhost:3010"
 ```
+
+### Premier démarrage
+
+L'ordre compte : le schéma, puis le référentiel des salles, puis les cours.
+
+```bash
+bun --filter server db:migrate    # crée le schéma
+bun --filter server db:seed       # alimente le référentiel des salles
+bun --filter server sync --force  # lit les documents de l'IUT
+```
+
+Le seed n'est pas optionnel : les salles ne sont jamais créées depuis un emploi du
+temps. Sans lui, les cours sont importés **sans salle**.
 
 ### Lancement
 
-#### Développement
 ```bash
-# Lancer les deux services en mode watch
-bun run dev
-
-# Ou séparément
-bun run dev:server
+bun run dev          # serveur, bot et site en mode surveillé
+bun run dev:server   # ou séparément
 bun run dev:bot
+bun run dev:web
 ```
 
-#### Production
-```bash
-# Lancer les deux services
-bun run start
-
-# Ou avec PM2
-pm2 start ecosystem.config.js
-```
+En production, `bun run start`, ou PM2 via `ecosystem.config.js`.
 
 ---
 
-## 📁 Structure du projet
+## 📁 Structure
 
 ```
 IUT-Room-Viewer/
-├── 📂 bot/                      # Bot Discord (TypeScript)
-│   ├── 📂 src/
-│   │   ├── 📂 commands/         # Commandes slash
-│   │   ├── 📂 events/           # Gestionnaires d'événements
-│   │   ├── 📂 services/         # Services (API, logging)
-│   │   ├── 📂 types/            # Types TypeScript
-│   │   ├── 📂 utils/            # Utilitaires
-│   │   └── 📄 index.ts          # Point d'entrée
-│   └── 📄 package.json
+├── server/              API REST, lecture des PDF, base de données
+│   ├── src/
+│   │   ├── api/         Express : routes, documentation OpenAPI
+│   │   ├── controllers/ Contrôle des entrées et des droits
+│   │   ├── services/    Logique métier
+│   │   ├── repository/  Accès aux données (TypeORM)
+│   │   ├── entities/    Le schéma
+│   │   ├── migrations/  Son évolution
+│   │   └── sync/        Découverte, téléchargement, lecture des PDF, import
+│   ├── tests/           Miroir de src/
+│   └── scripts/         Seuil de couverture
 │
-├── 📂 server/                   # Serveur API (TypeScript)
-│   ├── 📂 src/
-│   │   ├── 📂 api/              # Configuration Express
-│   │   │   └── 📂 routes/       # Définition des routes
-│   │   ├── 📂 controllers/      # Contrôleurs HTTP
-│   │   ├── 📂 services/         # Logique métier
-│   │   ├── 📂 repository/       # Accès aux données
-│   │   ├── 📂 middleware/       # Middlewares (auth, etc.)
-│   │   ├── 📂 sync/             # Synchronisation EDT
-│   │   ├── 📂 types/            # Types TypeScript
-│   │   └── 📄 index.ts          # Point d'entrée
-│   ├── 📂 prisma/               # Schémas de base de données
-│   │   ├── 📂 edt/              # Base EDT
-│   │   └── 📂 stats/            # Base Stats
-│   └── 📄 package.json
-│
-├── 📄 ecosystem.config.js       # Configuration PM2
-└── 📄 package.json              # Workspace root
+├── bot/                 Bot Discord (discord.js v14)
+├── web/                 Site (Vue 3, Vite, @gamo/ds)
+└── ecosystem.config.js  PM2
 ```
+
+Le sens de dépendance est `api → controller → service → repository → TypeORM`,
+sans saut de couche. Les conventions du dépôt sont dans [AGENTS.md](AGENTS.md).
+
+---
+
+## ✅ Tests
+
+```bash
+bun --filter server test        # 280 tests
+bun --filter server coverage    # avec le seuil de couverture
+```
+
+Le front n'est pas testé. La couverture est mesurée en lignes : `bun test`
+n'instrumente pas les branches.
 
 ---
 
 ## 🔧 Technologies
 
-| Catégorie | Technologies |
-|-----------|--------------|
-| **Runtime** | Bun |
-| **Langage** | TypeScript |
-| **API** | Express |
-| **Base de données** | MariaDB/MySQL, Prisma ORM |
-| **Bot** | Discord.js v14 |
-| **Données EDT** | [unilim](https://www.npmjs.com/package/unilim) |
+| | |
+| --- | --- |
+| **Runtime** | Bun, TypeScript strict |
+| **API** | Express, OpenAPI (Swagger UI) |
+| **Base** | PostgreSQL, TypeORM |
+| **Lecture des PDF** | pdfjs-dist |
+| **Bot** | discord.js v14 |
+| **Site** | Vue 3, Vite, [@gamo/ds](https://forge.gamo.one) |
 | **Planification** | node-cron |
 | **Production** | PM2 |
 
 ---
 
-## ✨ Fonctionnalités
-
-- 🔄 **Synchronisation automatique** des emplois du temps (toutes les heures)
-- 🏢 **Gestion intelligente des salles** (amphithéâtres, plages de salles)
-- 📊 **Organisation par étages** dans l'affichage Discord
-- 🎯 **API REST complète** pour intégrations tierces
-- 📈 **Statistiques d'utilisation** (base de données dédiée)
-
----
-
 ## 🤝 Contribution
 
-Les contributions sont les bienvenues ! N'hésitez pas à :
-- 🐛 Signaler des bugs
-- 💡 Proposer des améliorations
-- 🔧 Soumettre des pull requests
+Les contributions sont bienvenues : signalez un bug, proposez une amélioration,
+ouvrez une pull request. Si vous branchez quelque chose sur l'API, dites-le —
+c'est utile de savoir qui en dépend avant de la faire évoluer.
 
 ---
 
 ## 📄 Licence
 
-Ce projet est sous licence libre.
+Projet sous licence libre.
 
 ---
 
 <p align="center">
-  <i>Développé avec ❤️ pour les étudiants d'informatique de l'IUT Limousin</i>
+  <i>Développé pour les étudiants d'informatique de l'IUT du Limousin</i>
 </p>

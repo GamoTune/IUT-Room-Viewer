@@ -1,769 +1,117 @@
 // ============================================
-// 📁 src/api/swagger.ts
-// Configuration Swagger pour la documentation API
+// 📁 src/api/v2/swagger.ts
+// Documentation OpenAPI de l'API v2
 // ============================================
+
+import { errorResponse, okResponse, pick } from "../schemas.js";
 
 export const swaggerDocumentV2 = {
     openapi: "3.0.3",
     info: {
-        title: "IUT Room Viewer API",
-        description: "API publique pour consulter les salles et emplois du temps de l'IUT",
-        version: "3.0.0",
-        contact: {
-            name: "IUT Room Viewer",
-        },
+        title: "IUT Room Viewer — API v2",
+        version: "2.0.0",
+        description: [
+            "Les cours du département informatique de l'IUT du Limousin, mis à plat.",
+            "",
+            "**Lecture libre, sans authentification.**",
+            "",
+            "### Ce que la v2 change",
+            "",
+            "La v1 rend les cours *par salle*, avec des groupes sous forme numérique",
+            "(`{ mainGroup: -1, subGroup: -1 }`) qu'il faut savoir interpréter. La v2 rend",
+            "une liste de cours déjà lisibles : groupes nommés (`A1`, `G8`, `G8A`), salles",
+            "en clair, dates ISO.",
+            "",
+            "La v1 reste la seule à exposer le référentiel des salles, leur occupation et",
+            "les groupes : voir `/docs/v1`.",
+            "",
+            "### D'où viennent les données",
+            "",
+            "Uniquement des emplois du temps **de promotion** publiés en PDF par l'IUT,",
+            "relus plusieurs fois par jour. Les fichiers par groupe et les `.ics` ne sont",
+            "pas exploités : leurs attributions de groupe se sont révélées fausses.",
+            "",
+            "Toutes les dates sont en UTC (`Z`).",
+        ].join("\n"),
     },
-    servers: [
-        {
-            url: "/",
-            description: "Serveur actuel",
-        },
-    ],
-    tags: [
-        {
-            name: "Général",
-            description: "Endpoints généraux",
-        },
-        {
-            name: "Salles (v1)",
-            description: "Gestion et disponibilité des salles (API v1)",
-        },
-        {
-            name: "Emploi du temps (v1)",
-            description: "Consultation des emplois du temps (API v1)",
-        },
-        {
-            name: "Synchronisation (v1)",
-            description: "Statut de synchronisation des données (API v1)",
-        },
-        {
-            name: "Cours (v2)",
-            description: "Récupération des cours avec filtres avancés (API v2)",
-        },
-    ],
+    servers: [{ url: "/", description: "Serveur courant" }],
+    tags: [{ name: "Cours", description: "Consultation des cours" }],
+
     paths: {
-        "/": {
-            get: {
-                tags: ["Général"],
-                summary: "Page d'accueil de l'API",
-                description: "Retourne les informations de base de l'API et la liste des endpoints disponibles",
-                responses: {
-                    "200": {
-                        description: "Informations de l'API",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    type: "object",
-                                    properties: {
-                                        name: {
-                                            type: "string",
-                                            example: "IUT Room Viewer API",
-                                        },
-                                        version: {
-                                            type: "string",
-                                            example: "2.0.0",
-                                        },
-                                        documentation: {
-                                            type: "string",
-                                            example: "/docs",
-                                        },
-                                        endpoints: {
-                                            type: "object",
-                                            properties: {
-                                                health: { type: "string", example: "/health" },
-                                                docs: { type: "string", example: "/docs" },
-                                                rooms: { type: "string", example: "/api/v1/rooms" },
-                                                sync: { type: "string", example: "/api/v1/sync" },
-                                                schedule: { type: "string", example: "/api/v1/schedule" },
-                                                stats: { type: "string", example: "/api/v1/stats" },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        },
-        "/docs": {
-            get: {
-                tags: ["Général"],
-                summary: "Documentation Swagger",
-                description: "Interface interactive Swagger UI pour explorer et tester l'API publique",
-                responses: {
-                    "200": {
-                        description: "Page de documentation Swagger UI",
-                        content: {
-                            "text/html": {
-                                schema: {
-                                    type: "string",
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        },
-        "/health": {
-            get: {
-                tags: ["Général"],
-                summary: "Vérification de santé du serveur",
-                description: "Permet de vérifier que le serveur fonctionne correctement",
-                responses: {
-                    "200": {
-                        description: "Le serveur fonctionne correctement",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    type: "object",
-                                    properties: {
-                                        status: {
-                                            type: "string",
-                                            example: "ok",
-                                        },
-                                        uptime: {
-                                            type: "number",
-                                            description: "Temps de fonctionnement en secondes",
-                                            example: 3600,
-                                        },
-                                        timestamp: {
-                                            type: "string",
-                                            format: "date-time",
-                                            example: "2026-01-12T15:30:00.000Z",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        },
-        "/api/v1/rooms": {
-            get: {
-                tags: ["Salles (v1)"],
-                summary: "Liste toutes les salles",
-                description: "[API v1] Récupère la liste complète des salles disponibles dans la base de données",
-                responses: {
-                    "200": {
-                        description: "Liste des salles récupérée avec succès",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    $ref: "#/components/schemas/RoomListResponse",
-                                },
-                            },
-                        },
-                    },
-                    "500": {
-                        description: "Erreur serveur",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    $ref: "#/components/schemas/ErrorResponse",
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        },
-        "/api/v1/rooms/availability": {
-            get: {
-                tags: ["Salles (v1)"],
-                summary: "Disponibilité des salles",
-                description: "[API v1] Récupère la disponibilité des salles sur une plage horaire donnée, avec les cours associés",
-                parameters: [
-                    {
-                        name: "startTime",
-                        in: "query",
-                        required: true,
-                        description: "Date/heure de début (format ISO 8601)",
-                        schema: {
-                            type: "string",
-                            format: "date-time",
-                        },
-                        example: "2026-01-12T08:00:00.000Z",
-                    },
-                    {
-                        name: "endTime",
-                        in: "query",
-                        required: true,
-                        description: "Date/heure de fin (format ISO 8601)",
-                        schema: {
-                            type: "string",
-                            format: "date-time",
-                        },
-                        example: "2026-01-12T18:00:00.000Z",
-                    },
-                ],
-                responses: {
-                    "200": {
-                        description: "Disponibilité des salles récupérée avec succès",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    $ref: "#/components/schemas/RoomAvailabilityResponse",
-                                },
-                            },
-                        },
-                    },
-                    "400": {
-                        description: "Paramètres manquants ou invalides",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    $ref: "#/components/schemas/ErrorResponse",
-                                },
-                            },
-                        },
-                    },
-                    "500": {
-                        description: "Erreur serveur",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    $ref: "#/components/schemas/ErrorResponse",
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        },
-        "/api/v1/schedule": {
-            get: {
-                tags: ["Emploi du temps (v1)"],
-                summary: "Emploi du temps d'un groupe",
-                description: "[API v1] Récupère l'emploi du temps d'un groupe pour une date donnée",
-                parameters: [
-                    {
-                        name: "group",
-                        in: "query",
-                        required: true,
-                        description: "Numéro du groupe (G1-G3 pour BUT1, G4-G5 pour BUT2, G7-G8 pour BUT3). L'année est déduite automatiquement.",
-                        schema: {
-                            type: "string",
-                        },
-                        example: "G3",
-                    },
-                    {
-                        name: "tp",
-                        in: "query",
-                        required: false,
-                        description: "Sous-groupe de TP (ex: A, B)",
-                        schema: {
-                            type: "string",
-                        },
-                        example: "A",
-                    },
-                    {
-                        name: "date",
-                        in: "query",
-                        required: false,
-                        description: "Date pour laquelle récupérer l'emploi du temps (format ISO). Par défaut: aujourd'hui",
-                        schema: {
-                            type: "string",
-                            format: "date",
-                        },
-                        example: "2026-01-12",
-                    },
-                ],
-                responses: {
-                    "200": {
-                        description: "Emploi du temps récupéré avec succès",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    $ref: "#/components/schemas/ScheduleResponse",
-                                },
-                            },
-                        },
-                    },
-                    "400": {
-                        description: "Paramètres manquants ou invalides",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    $ref: "#/components/schemas/ErrorResponse",
-                                },
-                            },
-                        },
-                    },
-                    "500": {
-                        description: "Erreur serveur",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    $ref: "#/components/schemas/ErrorResponse",
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        },
-        "/api/v1/sync/status": {
-            get: {
-                tags: ["Synchronisation (v1)"],
-                summary: "Statut de synchronisation",
-                description: "[API v1] Retourne le statut actuel de la synchronisation des données avec Unilim",
-                responses: {
-                    "200": {
-                        description: "Statut récupéré avec succès",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    $ref: "#/components/schemas/SyncStatusResponse",
-                                },
-                            },
-                        },
-                    },
-                    "500": {
-                        description: "Erreur serveur",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    $ref: "#/components/schemas/ErrorResponse",
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        },
         "/api/v2/courses": {
             get: {
-                tags: ["Cours (v2)"],
-                summary: "Récupérer des cours",
-                description: "[API v2] Récupère les cours selon des filtres (période, groupes, salles, professeurs). Permet une recherche flexible avec normalisation automatique des noms de professeurs.",
+                tags: ["Cours"],
+                summary: "Lister les cours d'une période",
+                description: [
+                    "Rend les cours **entièrement contenus** dans la fenêtre demandée : un cours",
+                    "qui la chevauche sans y tenir n'apparaît pas. Demander la semaine entière",
+                    "plutôt qu'une journée pour ne rien manquer aux bords.",
+                    "",
+                    "Les filtres se cumulent. Chacun accepte plusieurs valeurs séparées par des",
+                    "virgules.",
+                    "",
+                    "Un filtre `groups` rend aussi les cours de niveau supérieur : demander `G8a`",
+                    "retourne ses TP, les TD de `G8` et les CM de sa promotion.",
+                ].join("\n"),
                 parameters: [
                     {
                         name: "start_at",
                         in: "query",
                         required: true,
-                        description: "Date/heure de début (format ISO 8601)",
-                        schema: {
-                            type: "string",
-                            format: "date-time",
-                        },
-                        example: "2026-01-12T08:00:00.000Z",
+                        description: "Début de la fenêtre, en ISO 8601.",
+                        schema: { type: "string", format: "date-time" },
+                        example: "2026-09-07T00:00:00.000Z",
                     },
                     {
                         name: "end_at",
                         in: "query",
                         required: true,
-                        description: "Date/heure de fin (format ISO 8601)",
-                        schema: {
-                            type: "string",
-                            format: "date-time",
-                        },
-                        example: "2026-01-12T18:00:00.000Z",
+                        description: "Fin de la fenêtre, en ISO 8601.",
+                        schema: { type: "string", format: "date-time" },
+                        example: "2026-09-14T00:00:00.000Z",
                     },
                     {
                         name: "groups",
                         in: "query",
                         required: false,
-                        description: "Liste des groupes séparés par des virgules (ex: A1,A2,B1)",
-                        schema: {
-                            type: "string",
-                        },
-                        example: "A1,A2",
+                        description:
+                            "Codes de groupes, tels que rendus par `/api/v1/groups`. Ne pas les coder en dur : ils changent d'une année à l'autre.",
+                        schema: { type: "string" },
+                        example: "G8a,G8b",
                     },
                     {
                         name: "rooms",
                         in: "query",
                         required: false,
-                        description: "Liste des salles séparées par des virgules (ex: 111,112,AmphA)",
-                        schema: {
-                            type: "string",
-                        },
-                        example: "111,112",
+                        description: "Noms de salles, tels que rendus par `/api/v1/rooms`.",
+                        schema: { type: "string" },
+                        example: "R52,112",
                     },
                     {
                         name: "teachers",
                         in: "query",
                         required: false,
-                        description: "Liste des professeurs séparés par des virgules. Supporte les noms partiels (ex: hugel) et les alias courts (ex: TH)",
-                        schema: {
-                            type: "string",
-                        },
-                        example: "hugel,TH",
+                        description: [
+                            "Enseignants. Un même enseignant est désigné tantôt par un code (`CO`),",
+                            "tantôt par un nom (`Onete C.`), sans lien entre les deux dans les",
+                            "documents : envoyer les deux formes, l'API réunit ce qui correspond.",
+                            "La correspondance exacte prime ; à défaut, une correspondance partielle",
+                            "sur le nom est acceptée, accents et casse ignorés.",
+                            "",
+                            "Aucune forme reconnue rend une liste vide, et non toutes les données.",
+                        ].join(" "),
+                        schema: { type: "string" },
+                        example: "CO,Onete C.",
                     },
                 ],
                 responses: {
-                    "200": {
-                        description: "Liste des cours récupérée avec succès",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    $ref: "#/components/schemas/CoursesResponse",
-                                },
-                            },
-                        },
-                    },
-                    "400": {
-                        description: "Paramètres manquants ou invalides",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    $ref: "#/components/schemas/ErrorResponse",
-                                },
-                            },
-                        },
-                    },
-                    "500": {
-                        description: "Erreur serveur",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    $ref: "#/components/schemas/ErrorResponse",
-                                },
-                            },
-                        },
-                    },
+                    "200": okResponse("Les cours de la période", "CoursesResponse"),
+                    "400": errorResponse("`start_at` ou `end_at` manquant"),
+                    "500": errorResponse("Erreur lors de la récupération"),
                 },
             },
         },
     },
-    components: {
-        schemas: {
-            ApiResponse: {
-                type: "object",
-                properties: {
-                    success: {
-                        type: "boolean",
-                        description: "Indique si la requête a réussi",
-                    },
-                    data: {
-                        description: "Données de la réponse (si succès)",
-                    },
-                    error: {
-                        type: "string",
-                        description: "Message d'erreur (si échec)",
-                    },
-                },
-                required: ["success"],
-            },
-            ErrorResponse: {
-                type: "object",
-                properties: {
-                    success: {
-                        type: "boolean",
-                        example: false,
-                    },
-                    error: {
-                        type: "string",
-                        example: "Description de l'erreur",
-                    },
-                },
-            },
-            Room: {
-                type: "object",
-                properties: {
-                    id: {
-                        type: "integer",
-                        example: 7,
-                    },
-                    name: {
-                        type: "string",
-                        example: "103",
-                    },
-                },
-            },
-            RoomListResponse: {
-                type: "object",
-                properties: {
-                    success: {
-                        type: "boolean",
-                        example: true,
-                    },
-                    data: {
-                        type: "array",
-                        items: {
-                            $ref: "#/components/schemas/Room",
-                        },
-                    },
-                },
-            },
-            Lesson: {
-                type: "object",
-                properties: {
-                    id: {
-                        type: "integer",
-                        example: 1,
-                    },
-                    type: {
-                        type: "string",
-                        example: "TD",
-                    },
-                    startTime: {
-                        type: "string",
-                        format: "date-time",
-                        example: "2026-01-12T12:30:00.000Z",
-                    },
-                    endTime: {
-                        type: "string",
-                        format: "date-time",
-                        example: "2026-01-12T14:30:00.000Z",
-                    },
-                    rooms: {
-                        type: "array",
-                        items: {
-                            type: "string",
-                        },
-                        example: ["111"],
-                    },
-                    teacher: {
-                        type: "string",
-                        nullable: true,
-                        example: "AP",
-                    },
-                    contentCode: {
-                        type: "string",
-                        example: "R109",
-                    },
-                    contentName: {
-                        type: "string",
-                        example: "Projet professionnel et personnel",
-                    },
-                    groups: {
-                        type: "array",
-                        items: {
-                            type: "object",
-                            properties: {
-                                mainGroup: {
-                                    type: "integer",
-                                    example: 1,
-                                },
-                                subGroup: {
-                                    type: "integer",
-                                    example: 0,
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-            RoomWithLessons: {
-                type: "object",
-                properties: {
-                    id: {
-                        type: "integer",
-                        example: 9,
-                    },
-                    name: {
-                        type: "string",
-                        example: "111",
-                    },
-                    lessons: {
-                        type: "array",
-                        items: {
-                            $ref: "#/components/schemas/Lesson",
-                        },
-                    },
-                },
-            },
-            RoomAvailabilityResponse: {
-                type: "object",
-                properties: {
-                    success: {
-                        type: "boolean",
-                        example: true,
-                    },
-                    data: {
-                        type: "array",
-                        items: {
-                            $ref: "#/components/schemas/RoomWithLessons",
-                        },
-                    },
-                },
-            },
-            Course: {
-                type: "object",
-                properties: {
-                    id: {
-                        type: "integer",
-                        example: 4192,
-                    },
-                    code: {
-                        type: "string",
-                        example: "R1.09",
-                    },
-                    title: {
-                        type: "string",
-                        example: "Projet professionnel et personnel",
-                    },
-                    startTime: {
-                        type: "string",
-                        format: "date-time",
-                        example: "2026-01-12T12:30:00.000Z",
-                    },
-                    endTime: {
-                        type: "string",
-                        format: "date-time",
-                        example: "2026-01-12T14:30:00.000Z",
-                    },
-                    room: {
-                        type: "string",
-                        example: "111",
-                    },
-                    teacher: {
-                        type: "string",
-                        example: "AP",
-                    },
-                    type: {
-                        type: "string",
-                        enum: ["CM", "TD", "TP", "DS", "SAE", "Autre"],
-                        example: "TD",
-                    },
-                },
-            },
-            ScheduleData: {
-                type: "object",
-                properties: {
-                    group: {
-                        type: "string",
-                        example: "G3",
-                    },
-                    year: {
-                        type: "string",
-                        description: "Année déduite automatiquement du groupe",
-                        example: "BUT1",
-                    },
-                    tp: {
-                        type: "string",
-                        example: "A",
-                    },
-                    date: {
-                        type: "string",
-                        format: "date",
-                        example: "2026-01-12",
-                    },
-                    courses: {
-                        type: "array",
-                        items: {
-                            $ref: "#/components/schemas/Course",
-                        },
-                    },
-                },
-            },
-            ScheduleResponse: {
-                type: "object",
-                properties: {
-                    success: {
-                        type: "boolean",
-                        example: true,
-                    },
-                    data: {
-                        $ref: "#/components/schemas/ScheduleData",
-                    },
-                },
-            },
-            SyncStatus: {
-                type: "object",
-                properties: {
-                    isRunning: {
-                        type: "boolean",
-                        description: "Indique si une synchronisation est en cours",
-                        example: false,
-                    },
-                    lastSync: {
-                        type: "string",
-                        format: "date-time",
-                        nullable: true,
-                        description: "Date de la dernière synchronisation",
-                        example: "2026-01-12T06:00:00.000Z",
-                    },
-                    lastError: {
-                        type: "string",
-                        nullable: true,
-                        description: "Dernière erreur de synchronisation",
-                        example: null,
-                    },
-                },
-            },
-            SyncStatusResponse: {
-                type: "object",
-                properties: {
-                    success: {
-                        type: "boolean",
-                        example: true,
-                    },
-                    data: {
-                        $ref: "#/components/schemas/SyncStatus",
-                    },
-                },
-            },
-            CourseV2: {
-                type: "object",
-                properties: {
-                    code: {
-                        type: "string",
-                        description: "Code de la matière",
-                        example: "R1.09",
-                    },
-                    title: {
-                        type: "string",
-                        description: "Nom du cours",
-                        example: "Projet professionnel et personnel",
-                    },
-                    type: {
-                        type: "string",
-                        enum: ["CM", "TD", "TP", "DS", "SAE", "Autre"],
-                        example: "TD",
-                    },
-                    rooms: {
-                        type: "array",
-                        items: {
-                            type: "string",
-                        },
-                        description: "Liste des salles",
-                        example: ["111", "112"],
-                    },
-                    groups: {
-                        type: "array",
-                        items: {
-                            type: "string",
-                        },
-                        description: "Liste des groupes",
-                        example: ["A1", "A2"],
-                    },
-                    teacher: {
-                        type: "string",
-                        description: "Nom du professeur",
-                        example: "Hügel T.",
-                    },
-                    start_at: {
-                        type: "string",
-                        format: "date-time",
-                        description: "Date/heure de début",
-                        example: "2026-01-12T08:00:00.000Z",
-                    },
-                    end_at: {
-                        type: "string",
-                        format: "date-time",
-                        description: "Date/heure de fin",
-                        example: "2026-01-12T10:00:00.000Z",
-                    },
-                },
-            },
-            CoursesResponse: {
-                type: "object",
-                properties: {
-                    success: {
-                        type: "boolean",
-                        example: true,
-                    },
-                    data: {
-                        type: "array",
-                        items: {
-                            $ref: "#/components/schemas/CourseV2",
-                        },
-                    },
-                },
-            },
-        },
-    },
-};
+
+    components: { schemas: pick("ErrorResponse", "CoursesResponse") },
+} as const;

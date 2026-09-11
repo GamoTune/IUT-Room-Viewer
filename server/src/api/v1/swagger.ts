@@ -1,77 +1,220 @@
 // ============================================
-// 📁 src/api/swagger.ts
-// Configuration Swagger pour la documentation API
+// 📁 src/api/v1/swagger.ts
+// Documentation OpenAPI de l'API v1
 // ============================================
+
+import { errorResponse, okResponse, pick } from "../schemas.js";
+
+/** Fenêtre temporelle, commune aux routes qui en prennent une. */
+const windowParams = [
+    {
+        name: "startTime",
+        in: "query",
+        required: true,
+        description: "Début de la fenêtre, en ISO 8601.",
+        schema: { type: "string", format: "date-time" },
+        example: "2026-09-10T09:30:00.000Z",
+    },
+    {
+        name: "endTime",
+        in: "query",
+        required: true,
+        description:
+            "Fin de la fenêtre. **Égale à `startTime` pour interroger un instant** : une salle est alors occupée si un cours est en cours à cette seconde précise.",
+        schema: { type: "string", format: "date-time" },
+        example: "2026-09-10T11:30:00.000Z",
+    },
+];
 
 export const swaggerDocument = {
     openapi: "3.0.3",
     info: {
-        title: "IUT Room Viewer API",
-        description: "API publique pour consulter les salles et emplois du temps de l'IUT",
-        version: "2.0.0",
-        contact: {
-            name: "IUT Room Viewer",
-        },
+        title: "IUT Room Viewer — API v1",
+        version: "1.0.0",
+        description: [
+            "Salles et emplois du temps du département informatique de l'IUT du Limousin.",
+            "",
+            "**Lecture libre, sans authentification.** Seules l'écriture — déclencher une",
+            "synchronisation, journaliser une commande du bot — demande une clé, passée en",
+            "en-tête `X-API-Key`.",
+            "",
+            "### D'où viennent les données",
+            "",
+            "Uniquement des emplois du temps **de promotion** publiés en PDF par l'IUT",
+            "(`A1_S1.pdf`), relus plusieurs fois par jour. Les fichiers par groupe et les",
+            "`.ics` de l'IUT ne sont pas exploités : leurs attributions de groupe se sont",
+            "révélées fausses et des cours y manquent.",
+            "",
+            "Une conséquence pratique : les documents n'écrivent pas le type de séance, il",
+            "est déduit de la portée de la case — un cours couvrant toute une promotion est",
+            "un CM, un groupe entier un TD, un demi-groupe un TP.",
+            "",
+            "### Fuseau horaire",
+            "",
+            "Toutes les dates sont en UTC (`Z`). Les emplois du temps sont publiés en heure",
+            "de Paris et convertis à la lecture, changements d'heure compris.",
+            "",
+            "### Voir aussi",
+            "",
+            "L'API v2 (`/docs/v2`) expose les cours sous une forme mise à plat, plus simple",
+            "à afficher.",
+        ].join("\n"),
     },
-    servers: [
-        {
-            url: "/",
-            description: "Serveur actuel",
-        },
-    ],
+    servers: [{ url: "/", description: "Serveur courant" }],
     tags: [
-        {
-            name: "Général",
-            description: "Endpoints généraux",
-        },
-        {
-            name: "Salles",
-            description: "Gestion et disponibilité des salles",
-        },
-        {
-            name: "Emploi du temps",
-            description: "Consultation des emplois du temps",
-        },
-        {
-            name: "Synchronisation",
-            description: "Statut de synchronisation des données",
-        },
+        { name: "Général", description: "État du service" },
+        { name: "Salles", description: "Référentiel et occupation" },
+        { name: "Groupes", description: "Groupes publiés par l'IUT" },
+        { name: "Emploi du temps", description: "Emploi du temps d'un groupe" },
+        { name: "Synchronisation", description: "Relecture des documents de l'IUT" },
+        { name: "Statistiques", description: "Journal d'usage du bot Discord" },
     ],
+
     paths: {
-        "/": {
+        "/health": {
             get: {
                 tags: ["Général"],
-                summary: "Page d'accueil de l'API",
-                description: "Retourne les informations de base de l'API et la liste des endpoints disponibles",
+                summary: "État du service",
+                description: "Répond même quand la base est injoignable : sert à vérifier que le processus tourne.",
                 responses: {
                     "200": {
-                        description: "Informations de l'API",
+                        description: "Le service répond",
                         content: {
                             "application/json": {
                                 schema: {
                                     type: "object",
                                     properties: {
-                                        name: {
-                                            type: "string",
-                                            example: "IUT Room Viewer API",
-                                        },
-                                        version: {
-                                            type: "string",
-                                            example: "2.0.0",
-                                        },
-                                        documentation: {
-                                            type: "string",
-                                            example: "/docs",
-                                        },
-                                        endpoints: {
+                                        status: { type: "string", example: "ok" },
+                                        version: { type: "string", example: "5.0.0" },
+                                        uptime: { type: "number", description: "Secondes depuis le démarrage.", example: 1050 },
+                                        timestamp: { type: "string", format: "date-time" },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+
+        "/api/v1/rooms": {
+            get: {
+                tags: ["Salles"],
+                summary: "Lister les salles",
+                description:
+                    "Le référentiel complet, dans l'ordre d'affichage (étage puis `displayOrder`). Il ne dit rien de l'occupation : voir `/api/v1/rooms/availability`.",
+                responses: { "200": okResponse("Les salles du département", "RoomListResponse") },
+            },
+        },
+
+        "/api/v1/rooms/availability": {
+            get: {
+                tags: ["Salles"],
+                summary: "Occupation des salles sur une période",
+                description: [
+                    "Rend **toutes** les salles, y compris libres : une salle sans cours porte une",
+                    "liste `lessons` vide — c'est une information, pas une absence.",
+                    "",
+                    "Un cours est retenu dès qu'il chevauche la fenêtre, même partiellement. Pour",
+                    "savoir quelles salles sont libres sur *toute* une plage, il suffit donc de",
+                    "garder celles dont `lessons` est vide.",
+                    "",
+                    "`R46` et `R47` sont physiquement les mêmes locaux : un cours dans l'une",
+                    "occupe l'autre. L'API les rend séparément, au client de les fusionner s'il",
+                    "le souhaite.",
+                ].join("\n"),
+                parameters: windowParams,
+                responses: {
+                    "200": okResponse("Les salles et ce qui les occupe", "RoomAvailabilityResponse"),
+                    "400": errorResponse("`startTime` ou `endTime` manquant"),
+                },
+            },
+        },
+
+        "/api/v1/groups": {
+            get: {
+                tags: ["Groupes"],
+                summary: "Lister les groupes",
+                description:
+                    "Les groupes tels que l'IUT les publie. Leur `code` est ce qu'attend le filtre `groups` de `/api/v2/courses` : ne pas les coder en dur, ils changent d'une année à l'autre.",
+                responses: { "200": okResponse("Les groupes connus", "GroupListResponse") },
+            },
+        },
+
+        "/api/v1/schedule": {
+            get: {
+                tags: ["Emploi du temps"],
+                summary: "Emploi du temps d'un groupe, pour une journée",
+                description:
+                    "Forme héritée du bot Discord. Pour une semaine ou un affichage en grille, préférer `/api/v2/courses`, qui rend les mêmes cours avec leurs salles multiples.",
+                parameters: [
+                    {
+                        name: "group",
+                        in: "query",
+                        required: true,
+                        description: "Numéro de groupe. L'année s'en déduit.",
+                        schema: { type: "string" },
+                        example: "G8",
+                    },
+                    {
+                        name: "tp",
+                        in: "query",
+                        required: false,
+                        description: "Sous-groupe, `A` ou `B`.",
+                        schema: { type: "string", enum: ["A", "B"] },
+                    },
+                    {
+                        name: "date",
+                        in: "query",
+                        required: false,
+                        description: "Jour consulté (`AAAA-MM-JJ`). Aujourd'hui par défaut.",
+                        schema: { type: "string", format: "date" },
+                    },
+                ],
+                responses: {
+                    "200": {
+                        description: "L'emploi du temps du jour",
+                        content: {
+                            "application/json": {
+                                schema: {
+                                    type: "object",
+                                    properties: {
+                                        success: { type: "boolean", example: true },
+                                        data: {
                                             type: "object",
                                             properties: {
-                                                health: { type: "string", example: "/health" },
-                                                docs: { type: "string", example: "/docs" },
-                                                rooms: { type: "string", example: "/api/v1/rooms" },
-                                                sync: { type: "string", example: "/api/v1/sync" },
-                                                schedule: { type: "string", example: "/api/v1/schedule" },
-                                                stats: { type: "string", example: "/api/v1/stats" },
+                                                group: { type: "string", example: "G8" },
+                                                year: {
+                                                    type: "string",
+                                                    description: "Nommée `BUT1`/`BUT2`/`BUT3` sur cette route, contrairement au reste de l'API.",
+                                                    example: "BUT3",
+                                                },
+                                                tp: { type: "string", nullable: true, example: "A" },
+                                                date: { type: "string", format: "date", example: "2026-09-10" },
+                                                courses: {
+                                                    type: "array",
+                                                    items: {
+                                                        type: "object",
+                                                        properties: {
+                                                            id: { type: "integer" },
+                                                            code: { type: "string", example: "R5A.14" },
+                                                            title: { type: "string", example: "Anglais" },
+                                                            startTime: { type: "string", format: "date-time" },
+                                                            endTime: { type: "string", format: "date-time" },
+                                                            room: {
+                                                                type: "string",
+                                                                description: "Salles réunies en une chaîne, contrairement à la v2.",
+                                                                example: "111, 112",
+                                                            },
+                                                            teacher: { type: "string", nullable: true },
+                                                            type: {
+                                                                type: "string",
+                                                                enum: ["CM", "TD", "TP", "DS", "SAE", "Autre"],
+                                                                description: "Nomenclature propre à cette route, distincte de celle des autres.",
+                                                            },
+                                                        },
+                                                    },
+                                                },
                                             },
                                         },
                                     },
@@ -79,526 +222,105 @@ export const swaggerDocument = {
                             },
                         },
                     },
+                    "400": errorResponse("`group` manquant"),
                 },
             },
         },
-        "/docs": {
-            get: {
-                tags: ["Général"],
-                summary: "Documentation Swagger",
-                description: "Interface interactive Swagger UI pour explorer et tester l'API publique",
-                responses: {
-                    "200": {
-                        description: "Page de documentation Swagger UI",
-                        content: {
-                            "text/html": {
-                                schema: {
-                                    type: "string",
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        },
-        "/health": {
-            get: {
-                tags: ["Général"],
-                summary: "Vérification de santé du serveur",
-                description: "Permet de vérifier que le serveur fonctionne correctement",
-                responses: {
-                    "200": {
-                        description: "Le serveur fonctionne correctement",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    type: "object",
-                                    properties: {
-                                        status: {
-                                            type: "string",
-                                            example: "ok",
-                                        },
-                                        uptime: {
-                                            type: "number",
-                                            description: "Temps de fonctionnement en secondes",
-                                            example: 3600,
-                                        },
-                                        timestamp: {
-                                            type: "string",
-                                            format: "date-time",
-                                            example: "2026-01-12T15:30:00.000Z",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        },
-        "/api/v1/rooms": {
-            get: {
-                tags: ["Salles"],
-                summary: "Liste toutes les salles",
-                description: "Récupère la liste complète des salles disponibles dans la base de données",
-                responses: {
-                    "200": {
-                        description: "Liste des salles récupérée avec succès",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    $ref: "#/components/schemas/RoomListResponse",
-                                },
-                            },
-                        },
-                    },
-                    "500": {
-                        description: "Erreur serveur",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    $ref: "#/components/schemas/ErrorResponse",
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        },
-        "/api/v1/rooms/availability": {
-            get: {
-                tags: ["Salles"],
-                summary: "Disponibilité des salles",
-                description: "Récupère la disponibilité des salles sur une plage horaire donnée, avec les cours associés",
-                parameters: [
-                    {
-                        name: "startTime",
-                        in: "query",
-                        required: true,
-                        description: "Date/heure de début (format ISO 8601)",
-                        schema: {
-                            type: "string",
-                            format: "date-time",
-                        },
-                        example: "2026-01-12T08:00:00.000Z",
-                    },
-                    {
-                        name: "endTime",
-                        in: "query",
-                        required: true,
-                        description: "Date/heure de fin (format ISO 8601)",
-                        schema: {
-                            type: "string",
-                            format: "date-time",
-                        },
-                        example: "2026-01-12T18:00:00.000Z",
-                    },
-                ],
-                responses: {
-                    "200": {
-                        description: "Disponibilité des salles récupérée avec succès",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    $ref: "#/components/schemas/RoomAvailabilityResponse",
-                                },
-                            },
-                        },
-                    },
-                    "400": {
-                        description: "Paramètres manquants ou invalides",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    $ref: "#/components/schemas/ErrorResponse",
-                                },
-                            },
-                        },
-                    },
-                    "500": {
-                        description: "Erreur serveur",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    $ref: "#/components/schemas/ErrorResponse",
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        },
-        "/api/v1/schedule": {
-            get: {
-                tags: ["Emploi du temps"],
-                summary: "Emploi du temps d'un groupe",
-                description: "Récupère l'emploi du temps d'un groupe pour une date donnée",
-                parameters: [
-                    {
-                        name: "group",
-                        in: "query",
-                        required: true,
-                        description: "Numéro du groupe (G1-G3 pour BUT1, G4-G5 pour BUT2, G7-G8 pour BUT3). L'année est déduite automatiquement.",
-                        schema: {
-                            type: "string",
-                        },
-                        example: "G3",
-                    },
-                    {
-                        name: "tp",
-                        in: "query",
-                        required: false,
-                        description: "Sous-groupe de TP (ex: A, B)",
-                        schema: {
-                            type: "string",
-                        },
-                        example: "A",
-                    },
-                    {
-                        name: "date",
-                        in: "query",
-                        required: false,
-                        description: "Date pour laquelle récupérer l'emploi du temps (format ISO). Par défaut: aujourd'hui",
-                        schema: {
-                            type: "string",
-                            format: "date",
-                        },
-                        example: "2026-01-12",
-                    },
-                ],
-                responses: {
-                    "200": {
-                        description: "Emploi du temps récupéré avec succès",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    $ref: "#/components/schemas/ScheduleResponse",
-                                },
-                            },
-                        },
-                    },
-                    "400": {
-                        description: "Paramètres manquants ou invalides",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    $ref: "#/components/schemas/ErrorResponse",
-                                },
-                            },
-                        },
-                    },
-                    "500": {
-                        description: "Erreur serveur",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    $ref: "#/components/schemas/ErrorResponse",
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        },
+
         "/api/v1/sync/status": {
             get: {
                 tags: ["Synchronisation"],
-                summary: "Statut de synchronisation",
-                description: "Retourne le statut actuel de la synchronisation des données avec Unilim",
+                summary: "Où en est la synchronisation",
+                description:
+                    "`lastSync` vaut `null` tant qu'aucune synchronisation n'a eu lieu depuis le démarrage : le bilan n'est pas conservé en base.",
+                responses: { "200": okResponse("État courant", "SyncStatusResponse") },
+            },
+        },
+
+        "/api/v1/sync/trigger": {
+            post: {
+                tags: ["Synchronisation"],
+                summary: "Déclencher une synchronisation",
+                security: [{ ApiKey: [] }],
+                description: [
+                    "Relit les documents de l'IUT et alimente la base. Les documents inchangés",
+                    "depuis le dernier passage sont sautés — l'IUT répond alors 304.",
+                    "",
+                    "L'appel est **synchrone** : il rend la main une fois la synchronisation finie,",
+                    "ce qui prend quelques secondes.",
+                ].join("\n"),
                 responses: {
-                    "200": {
-                        description: "Statut récupéré avec succès",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    $ref: "#/components/schemas/SyncStatusResponse",
-                                },
-                            },
-                        },
-                    },
-                    "500": {
-                        description: "Erreur serveur",
-                        content: {
-                            "application/json": {
-                                schema: {
-                                    $ref: "#/components/schemas/ErrorResponse",
+                    "200": okResponse("Bilan du passage", "SyncSummaryResponse"),
+                    "401": errorResponse("Clé absente ou invalide"),
+                    "409": errorResponse("Une synchronisation est déjà en cours"),
+                    "500": errorResponse("La synchronisation a échoué"),
+                },
+            },
+        },
+
+        "/api/v1/sync/reset": {
+            post: {
+                tags: ["Synchronisation"],
+                summary: "Reprendre la synchronisation depuis zéro",
+                security: [{ ApiKey: [] }],
+                description:
+                    "Comme `/trigger`, mais en ignorant les en-têtes de cache : tous les documents sont retéléchargés et relus, même inchangés. À réserver aux cas où la lecture elle-même a changé.",
+                responses: {
+                    "200": okResponse("Bilan du passage", "SyncSummaryResponse"),
+                    "401": errorResponse("Clé absente ou invalide"),
+                    "500": errorResponse("La reprise a échoué"),
+                },
+            },
+        },
+
+        "/api/v1/stats/log": {
+            post: {
+                tags: ["Statistiques"],
+                summary: "Journaliser une commande du bot",
+                security: [{ ApiKey: [] }],
+                description: "Réservé au bot Discord. Enregistre l'usage d'une commande et rafraîchit le pseudo de son auteur.",
+                requestBody: {
+                    required: true,
+                    content: {
+                        "application/json": {
+                            schema: {
+                                type: "object",
+                                required: ["discordUserId", "username", "command"],
+                                properties: {
+                                    discordUserId: { type: "string", example: "123456789012345678" },
+                                    username: { type: "string", example: "bobbynou" },
+                                    globalName: { type: "string", nullable: true, example: "Bobby" },
+                                    command: { type: "string", example: "/salles_maintenant" },
                                 },
                             },
                         },
                     },
                 },
+                responses: {
+                    "200": { description: "Commande enregistrée" },
+                    "400": errorResponse("Champ obligatoire manquant"),
+                    "401": errorResponse("Clé absente ou invalide"),
+                },
             },
         },
     },
+
     components: {
-        schemas: {
-            ApiResponse: {
-                type: "object",
-                properties: {
-                    success: {
-                        type: "boolean",
-                        description: "Indique si la requête a réussi",
-                    },
-                    data: {
-                        description: "Données de la réponse (si succès)",
-                    },
-                    error: {
-                        type: "string",
-                        description: "Message d'erreur (si échec)",
-                    },
-                },
-                required: ["success"],
-            },
-            ErrorResponse: {
-                type: "object",
-                properties: {
-                    success: {
-                        type: "boolean",
-                        example: false,
-                    },
-                    error: {
-                        type: "string",
-                        example: "Description de l'erreur",
-                    },
-                },
-            },
-            Room: {
-                type: "object",
-                properties: {
-                    id: {
-                        type: "integer",
-                        example: 7,
-                    },
-                    name: {
-                        type: "string",
-                        example: "103",
-                    },
-                },
-            },
-            RoomListResponse: {
-                type: "object",
-                properties: {
-                    success: {
-                        type: "boolean",
-                        example: true,
-                    },
-                    data: {
-                        type: "array",
-                        items: {
-                            $ref: "#/components/schemas/Room",
-                        },
-                    },
-                },
-            },
-            Lesson: {
-                type: "object",
-                properties: {
-                    id: {
-                        type: "integer",
-                        example: 1,
-                    },
-                    type: {
-                        type: "string",
-                        example: "TD",
-                    },
-                    startTime: {
-                        type: "string",
-                        format: "date-time",
-                        example: "2026-01-12T12:30:00.000Z",
-                    },
-                    endTime: {
-                        type: "string",
-                        format: "date-time",
-                        example: "2026-01-12T14:30:00.000Z",
-                    },
-                    rooms: {
-                        type: "array",
-                        items: {
-                            type: "string",
-                        },
-                        example: ["111"],
-                    },
-                    teacher: {
-                        type: "string",
-                        nullable: true,
-                        example: "AP",
-                    },
-                    contentCode: {
-                        type: "string",
-                        example: "R109",
-                    },
-                    contentName: {
-                        type: "string",
-                        example: "Projet professionnel et personnel",
-                    },
-                    groups: {
-                        type: "array",
-                        items: {
-                            type: "object",
-                            properties: {
-                                mainGroup: {
-                                    type: "integer",
-                                    example: 1,
-                                },
-                                subGroup: {
-                                    type: "integer",
-                                    example: 0,
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-            RoomWithLessons: {
-                type: "object",
-                properties: {
-                    id: {
-                        type: "integer",
-                        example: 9,
-                    },
-                    name: {
-                        type: "string",
-                        example: "111",
-                    },
-                    lessons: {
-                        type: "array",
-                        items: {
-                            $ref: "#/components/schemas/Lesson",
-                        },
-                    },
-                },
-            },
-            RoomAvailabilityResponse: {
-                type: "object",
-                properties: {
-                    success: {
-                        type: "boolean",
-                        example: true,
-                    },
-                    data: {
-                        type: "array",
-                        items: {
-                            $ref: "#/components/schemas/RoomWithLessons",
-                        },
-                    },
-                },
-            },
-            Course: {
-                type: "object",
-                properties: {
-                    id: {
-                        type: "integer",
-                        example: 4192,
-                    },
-                    code: {
-                        type: "string",
-                        example: "R1.09",
-                    },
-                    title: {
-                        type: "string",
-                        example: "Projet professionnel et personnel",
-                    },
-                    startTime: {
-                        type: "string",
-                        format: "date-time",
-                        example: "2026-01-12T12:30:00.000Z",
-                    },
-                    endTime: {
-                        type: "string",
-                        format: "date-time",
-                        example: "2026-01-12T14:30:00.000Z",
-                    },
-                    room: {
-                        type: "string",
-                        example: "111",
-                    },
-                    teacher: {
-                        type: "string",
-                        example: "AP",
-                    },
-                    type: {
-                        type: "string",
-                        enum: ["CM", "TD", "TP", "DS", "SAE", "Autre"],
-                        example: "TD",
-                    },
-                },
-            },
-            ScheduleData: {
-                type: "object",
-                properties: {
-                    group: {
-                        type: "string",
-                        example: "G3",
-                    },
-                    year: {
-                        type: "string",
-                        description: "Année déduite automatiquement du groupe",
-                        example: "BUT1",
-                    },
-                    tp: {
-                        type: "string",
-                        example: "A",
-                    },
-                    date: {
-                        type: "string",
-                        format: "date",
-                        example: "2026-01-12",
-                    },
-                    courses: {
-                        type: "array",
-                        items: {
-                            $ref: "#/components/schemas/Course",
-                        },
-                    },
-                },
-            },
-            ScheduleResponse: {
-                type: "object",
-                properties: {
-                    success: {
-                        type: "boolean",
-                        example: true,
-                    },
-                    data: {
-                        $ref: "#/components/schemas/ScheduleData",
-                    },
-                },
-            },
-            SyncStatus: {
-                type: "object",
-                properties: {
-                    isRunning: {
-                        type: "boolean",
-                        description: "Indique si une synchronisation est en cours",
-                        example: false,
-                    },
-                    lastSync: {
-                        type: "string",
-                        format: "date-time",
-                        nullable: true,
-                        description: "Date de la dernière synchronisation",
-                        example: "2026-01-12T06:00:00.000Z",
-                    },
-                    lastError: {
-                        type: "string",
-                        nullable: true,
-                        description: "Dernière erreur de synchronisation",
-                        example: null,
-                    },
-                },
-            },
-            SyncStatusResponse: {
-                type: "object",
-                properties: {
-                    success: {
-                        type: "boolean",
-                        example: true,
-                    },
-                    data: {
-                        $ref: "#/components/schemas/SyncStatus",
-                    },
-                },
+        securitySchemes: {
+            ApiKey: {
+                type: "apiKey",
+                in: "header",
+                name: "X-API-Key",
+                description: "Clé d'administration. Sans elle, ces routes répondent 401.",
             },
         },
+        schemas: pick(
+            "ErrorResponse",
+            "RoomListResponse",
+            "RoomAvailabilityResponse",
+            "GroupListResponse",
+            "SyncStatusResponse",
+            "SyncSummaryResponse",
+        ),
     },
-};
+} as const;
