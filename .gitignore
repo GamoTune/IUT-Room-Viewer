@@ -136,6 +136,5 @@ dist
 prisma/migrations
 generated/
 /src/generated/prisma
-bun.lock
 # Archives des EDT publiés par l'IUT (PDF + ICS), regénérables par la sync
 server/data/backup/

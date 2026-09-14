@@ -10,11 +10,14 @@ import groupRepository from "../../src/repository/group.repository.js";
 describe("GroupRepository", () => {
     const getRepository = spyOn(dataSource, "getRepository");
     const find = mock();
+    const findOneBy = mock();
 
     beforeEach(() => {
         find.mockClear();
+        findOneBy.mockClear();
         find.mockResolvedValue([]);
-        getRepository.mockImplementation((() => ({ find })) as never);
+        findOneBy.mockResolvedValue(null);
+        getRepository.mockImplementation((() => ({ find, findOneBy })) as never);
     });
 
     afterAll(() => {
@@ -36,6 +39,20 @@ describe("GroupRepository", () => {
             find.mockResolvedValue(groupes);
 
             expect(await groupRepository.findAll()).toBe(groupes as never);
+        });
+    });
+
+    describe("findByCode", () => {
+        it("cherche le groupe par son code publié", async () => {
+            const groupe = { id: 1, code: "G8a" };
+            findOneBy.mockResolvedValue(groupe);
+
+            expect(await groupRepository.findByCode("G8a")).toBe(groupe as never);
+            expect(findOneBy).toHaveBeenCalledWith({ code: "G8a" });
+        });
+
+        it("rend null pour un code inconnu", async () => {
+            expect(await groupRepository.findByCode("G99z")).toBeNull();
         });
     });
 });

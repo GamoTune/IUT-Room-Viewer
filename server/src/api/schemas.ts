@@ -115,6 +115,44 @@ export const schemas = {
         },
     },
 
+    SourceFile: {
+        type: "object",
+        description: "Un emplacement de document. Un document absent reste un emplacement, `url` à `null`.",
+        properties: {
+            level: { type: "string", enum: ["subGroup", "group", "year"], example: "subGroup" },
+            scope: {
+                type: "string",
+                nullable: true,
+                description: "Périmètre publié. `null` quand le niveau n'existe pas pour ce groupe.",
+                example: "G8a",
+            },
+            format: { type: "string", enum: ["pdf", "ics"], example: "pdf" },
+            url: {
+                type: "string",
+                nullable: true,
+                description: "Adresse du document chez l'IUT, `null` quand il n'est pas publié.",
+                example: "https://edt-iut-info.unilim.fr/edt/A3/G8a/G8a_S2.pdf",
+            },
+        },
+    },
+
+    WeekSources: {
+        type: "object",
+        properties: {
+            weekNumber: {
+                type: "integer",
+                nullable: true,
+                description: "Semaine depuis la rentrée (`S2`), `null` quand aucun document ne couvre la période.",
+                example: 2,
+            },
+            files: {
+                type: "array",
+                description: "Toujours six emplacements : sous-groupe, groupe puis année, chacun en PDF puis ICS.",
+                items: { $ref: "#/components/schemas/SourceFile" },
+            },
+        },
+    },
+
     Course: {
         type: "object",
         description: "Un cours, mis à plat pour l'affichage.",
@@ -170,6 +208,7 @@ export const schemas = {
         items: { $ref: "#/components/schemas/RoomWithLessons" },
     }),
     GroupListResponse: envelope({ type: "array", items: { $ref: "#/components/schemas/Group" } }),
+    WeekSourcesResponse: envelope({ $ref: "#/components/schemas/WeekSources" }),
     CoursesResponse: envelope({ type: "array", items: { $ref: "#/components/schemas/Course" } }),
     SyncStatusResponse: envelope({ $ref: "#/components/schemas/SyncStatus" }),
     SyncSummaryResponse: envelope({ $ref: "#/components/schemas/SyncSummary" }),
