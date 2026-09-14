@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, shallowRef, watch } from "vue";
-import { Alert, Badge, Button, Modal, ModalBody, ModalHeader, Skeleton, Surface } from "@gamo/ds";
+import { Alert, Button, Modal, ModalBody, ModalHeader, Skeleton, Surface } from "@gamo/ds";
 import { useCachedResource, type CachedResource } from "../composables/useCachedResource";
 import { addDays } from "../composables/useSchedule";
 import type { SourceFile, WeekSources } from "../types/api";
@@ -33,24 +33,26 @@ watch(open, (isOpen) => {
     );
 });
 
-const LEVEL_LABELS: Record<SourceFile["level"], string> = {
-    subGroup: "Sous-groupe",
-    group: "Groupe",
-    year: "Année",
-};
+/**
+ * Du plus large au plus précis. L'API rend l'ordre inverse ; c'est un choix de
+ * lecture, il reste donc ici plutôt que dans le contrat.
+ */
+const LEVEL_ORDER: SourceFile["level"][] = ["year", "group", "subGroup"];
 
 const FORMATS = [
     { format: "pdf", label: "PDF" },
     { format: "ics", label: "ICS" },
 ] as const;
 
-/** Une colonne par format, et dans chacune le sous-groupe en haut, l'année en bas. */
+/** Une colonne par format, et dans chacune l'année en haut, le sous-groupe en bas. */
 const columns = computed(() => {
     const files = sources.value?.data.value?.files ?? [];
     return FORMATS.map(({ format, label }) => ({
         format,
         label,
-        files: files.filter((file) => file.format === format),
+        files: files
+            .filter((file) => file.format === format)
+            .sort((a, b) => LEVEL_ORDER.indexOf(a.level) - LEVEL_ORDER.indexOf(b.level)),
     }));
 });
 
@@ -112,19 +114,30 @@ function scopeLabel(file: SourceFile): string {
                             padding="sm"
                             class="downloads__row"
                         >
-                            <span>{{ LEVEL_LABELS[file.level] }} {{ scopeLabel(file) }}</span>
+                            <!-- `A3`, `G8`, `G8A` : la forme du code dit déjà le niveau. -->
+                            <span class="downloads__scope">{{ scopeLabel(file) }}</span>
 
                             <Button
                                 v-if="safeUrl(file)"
                                 size="sm"
                                 outline
                                 :href="safeUrl(file)!"
+                                :aria-label="`Télécharger ${scopeLabel(file)} en ${column.label}`"
                                 target="_blank"
                                 rel="noopener noreferrer"
                             >
                                 Télécharger
                             </Button>
-                            <Badge v-else variant="muted">Non publié</Badge>
+                            <!-- Même forme que le bouton actif : seul son état dit que le document manque. -->
+                            <Button
+                                v-else
+                                size="sm"
+                                outline
+                                disabled
+                                :aria-label="`${scopeLabel(file)} en ${column.label} : non publié par l'IUT`"
+                            >
+                                Non publié
+                            </Button>
                         </Surface>
                     </template>
                 </div>
@@ -156,6 +169,14 @@ function scopeLabel(file: SourceFile): string {
     margin: 0;
     font-size: var(--fs-sm);
     font-weight: 600;
+}
+
+/* La police d'affichage du design system, celle de ses titres. */
+.downloads__scope {
+    font-family: var(--font-display);
+    font-size: var(--fs-lg);
+    font-weight: 700;
+    line-height: 1;
 }
 
 .downloads__row {
