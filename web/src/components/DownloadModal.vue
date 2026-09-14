@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, shallowRef, watch } from "vue";
-import { Alert, Modal, ModalBody, ModalHeader, Skeleton } from "@gamo/ds";
+import { Alert, Badge, Button, Modal, ModalBody, ModalHeader, Skeleton, Surface } from "@gamo/ds";
 import { useCachedResource, type CachedResource } from "../composables/useCachedResource";
 import { addDays } from "../composables/useSchedule";
 import type { SourceFile, WeekSources } from "../types/api";
@@ -76,10 +76,6 @@ function safeUrl(file: SourceFile): string | null {
     }
 }
 
-function fileName(url: string): string {
-    return decodeURIComponent(url.split("/").pop() ?? url);
-}
-
 function scopeLabel(file: SourceFile): string {
     return file.scope ? file.scope.toUpperCase() : "—";
 }
@@ -87,49 +83,50 @@ function scopeLabel(file: SourceFile): string {
 
 <template>
     <Modal v-model:open="open" size="lg">
-        <ModalHeader>
-            Télécharger
-            <span class="downloads__week">
-                <template v-if="weekNumber !== null">semaine S{{ weekNumber }} · </template>{{ period }}
-            </span>
-        </ModalHeader>
+        <ModalHeader>Télécharger</ModalHeader>
 
         <ModalBody>
+            <p class="downloads__period">
+                <template v-if="weekNumber !== null">Semaine {{ weekNumber }} · </template>{{ period }}
+            </p>
+
             <Skeleton v-if="!hasData && freshness === 'revalidating'" height="12rem" />
 
-            <Alert v-else-if="!hasData" variant="error">
-                Impossible de récupérer la liste des documents.
-            </Alert>
+            <Alert v-else-if="!hasData" variant="error">Impossible de récupérer la liste des documents.</Alert>
 
             <Alert v-else-if="weekNumber === null" variant="info">
                 L'IUT n'a publié aucun emploi du temps pour cette semaine.
             </Alert>
 
             <template v-else>
+                <!-- Grille à plat, remplie colonne par colonne : les deux colonnes partagent
+                     leurs rangées, et une ligne avec bouton n'est pas plus haute que sa voisine. -->
                 <div class="downloads">
-                    <section v-for="column in columns" :key="column.format" class="downloads__column">
-                        <h3 class="downloads__heading">{{ column.label }}</h3>
+                    <template v-for="column in columns" :key="column.format">
+                        <h3 class="downloads__title">{{ column.label }}</h3>
 
-                        <ul class="downloads__list">
-                            <li v-for="file in column.files" :key="file.level" class="downloads__item">
-                                <span class="downloads__level">
-                                    {{ LEVEL_LABELS[file.level] }}
-                                    <strong>{{ scopeLabel(file) }}</strong>
-                                </span>
+                        <Surface
+                            v-for="file in column.files"
+                            :key="`${column.format}-${file.level}`"
+                            level="surface"
+                            padding="sm"
+                            class="downloads__row"
+                        >
+                            <span>{{ LEVEL_LABELS[file.level] }} {{ scopeLabel(file) }}</span>
 
-                                <a
-                                    v-if="safeUrl(file)"
-                                    class="downloads__link"
-                                    :href="safeUrl(file)!"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                >
-                                    {{ fileName(safeUrl(file)!) }}
-                                </a>
-                                <span v-else class="downloads__missing">non publié</span>
-                            </li>
-                        </ul>
-                    </section>
+                            <Button
+                                v-if="safeUrl(file)"
+                                size="sm"
+                                outline
+                                :href="safeUrl(file)!"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                Télécharger
+                            </Button>
+                            <Badge v-else variant="muted">Non publié</Badge>
+                        </Surface>
+                    </template>
                 </div>
 
                 <p class="downloads__note">
@@ -142,81 +139,49 @@ function scopeLabel(file: SourceFile): string {
 </template>
 
 <style scoped>
-.downloads__week {
-    display: block;
-    margin-top: var(--s1);
+.downloads__period {
+    margin: 0 0 var(--s4);
     color: var(--muted);
-    font-family: var(--font-body);
-    font-size: var(--fs-sm);
-    font-weight: 400;
 }
 
 .downloads {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--s4);
+    grid-template-rows: auto repeat(3, 1fr);
+    grid-auto-flow: column;
+    gap: var(--s2) var(--s4);
 }
 
-.downloads__heading {
-    margin: 0 0 var(--s2);
-    color: var(--muted);
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    font-weight: 600;
-    letter-spacing: 0.08em;
-}
-
-.downloads__list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--s2);
+.downloads__title {
     margin: 0;
-    padding: 0;
-    list-style: none;
+    font-size: var(--fs-sm);
+    font-weight: 600;
 }
 
-.downloads__item {
+.downloads__row {
     display: flex;
-    flex-direction: column;
-    gap: var(--s1);
-    padding: var(--s3);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
-    background: var(--surface);
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s2);
 }
 
-.downloads__level {
-    color: var(--muted);
-    font-size: var(--fs-sm);
-}
+/* Sur un téléphone, deux colonnes ne laissent pas la place au bouton : PDF puis
+   ICS s'empilent, dans l'ordre même où ils sont écrits. */
+@media (max-width: 36rem) {
+    .downloads {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: none;
+        grid-auto-flow: row;
+    }
 
-.downloads__level strong {
-    color: var(--text);
-    font-family: var(--font-mono);
-}
-
-.downloads__link {
-    overflow: hidden;
-    color: var(--lav);
-    font-family: var(--font-mono);
-    font-size: var(--fs-sm);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.downloads__link:hover {
-    text-decoration: underline;
-}
-
-.downloads__missing {
-    color: var(--muted);
-    font-size: var(--fs-sm);
-    font-style: italic;
+    .downloads__title:not(:first-child) {
+        margin-top: var(--s2);
+    }
 }
 
 .downloads__note {
     margin: var(--s4) 0 0;
     color: var(--muted);
-    font-size: var(--fs-xs);
+    font-size: var(--fs-sm);
 }
 </style>
