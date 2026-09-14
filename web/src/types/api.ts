@@ -68,3 +68,19 @@ export interface Course {
     start_at: string;
     end_at: string;
 }
+
+/** Un emplacement de document publié par l'IUT, tel que rendu par `/api/v1/sources`. */
+export interface SourceFile {
+    level: "subGroup" | "group" | "year";
+    /** `null` quand le niveau n'existe pas pour ce groupe. */
+    scope: string | null;
+    format: "pdf" | "ics";
+    /** `null` quand l'IUT ne publie pas ce document. */
+    url: string | null;
+}
+
+/** Les documents d'une semaine : six emplacements, du sous-groupe à l'année. */
+export interface WeekSources {
+    weekNumber: number | null;
+    files: SourceFile[];
+}

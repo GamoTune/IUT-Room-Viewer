@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { Alert, Button, EmptyState, SectionHeader, Skeleton, Surface } from "@gamo/ds";
+import DownloadModal from "../components/DownloadModal.vue";
 import FreshnessBadge from "../components/FreshnessBadge.vue";
 import GroupSelect from "../components/GroupSelect.vue";
 import ScheduleGrid from "../components/ScheduleGrid.vue";
@@ -21,6 +22,9 @@ watch(
 );
 
 const { courses, freshness, monday, previousWeek, nextWeek, thisWeek, reload } = useSchedule(selected);
+
+/** Fenêtre des documents de la semaine, montée en permanence : la Modal ne s'ouvre qu'une fois dans le DOM. */
+const downloadsOpen = ref(false);
 
 /** En dessous de cette largeur, six colonnes deviennent illisibles. */
 const WIDE_ENOUGH = 700;
@@ -74,6 +78,7 @@ function shiftDay(delta: number): void {
             <div class="schedule__actions">
                 <FreshnessBadge :freshness="freshness" />
                 <Button ghost size="sm" @click="reload">Actualiser</Button>
+                <Button ghost size="sm" :disabled="!selected" @click="downloadsOpen = true">Télécharger</Button>
                 <GroupSelect v-model="selected" />
             </div>
         </header>
@@ -109,6 +114,8 @@ function shiftDay(delta: number): void {
         <Surface v-else level="card" padding="sm" clip as="section">
             <ScheduleGrid :courses="courses" :monday="monday" :single-day="singleDay" />
         </Surface>
+
+        <DownloadModal v-model:open="downloadsOpen" :group="selected" :monday="monday" />
     </div>
 </template>
 
@@ -131,6 +138,8 @@ function shiftDay(delta: number): void {
     display: flex;
     align-items: center;
     gap: var(--s3);
+    /* Quatre commandes ne tiennent pas sur une ligne de téléphone. */
+    flex-wrap: wrap;
 }
 
 .schedule__nav {
