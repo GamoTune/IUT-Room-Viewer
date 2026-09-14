@@ -21,6 +21,11 @@ export class GroupRepository {
             order: { year: "ASC", mainGroup: "ASC", subGroup: "ASC" },
         });
     }
+
+    /** Un groupe par son code publié (`G8a`), `null` s'il est inconnu. */
+    async findByCode(code: string): Promise<StudentGroup | null> {
+        return dataSource.getRepository(StudentGroup).findOneBy({ code });
+    }
 }
 
 export default GroupRepository.instance;

@@ -65,6 +65,7 @@ export const swaggerDocument = {
         { name: "Général", description: "État du service" },
         { name: "Salles", description: "Référentiel et occupation" },
         { name: "Groupes", description: "Groupes publiés par l'IUT" },
+        { name: "Documents", description: "Emplois du temps tels que l'IUT les publie" },
         { name: "Emploi du temps", description: "Emploi du temps d'un groupe" },
         { name: "Synchronisation", description: "Relecture des documents de l'IUT" },
         { name: "Statistiques", description: "Journal d'usage du bot Discord" },
@@ -138,6 +139,47 @@ export const swaggerDocument = {
                 description:
                     "Les groupes tels que l'IUT les publie. Leur `code` est ce qu'attend le filtre `groups` de `/api/v2/courses` : ne pas les coder en dur, ils changent d'une année à l'autre.",
                 responses: { "200": okResponse("Les groupes connus", "GroupListResponse") },
+            },
+        },
+
+        "/api/v1/sources": {
+            get: {
+                tags: ["Documents"],
+                summary: "Documents de l'IUT pour un groupe et une semaine",
+                description: [
+                    "Les emplois du temps tels que l'IUT les publie, pour le sous-groupe, le groupe",
+                    "et l'année d'un groupe. Les adresses pointent chez l'IUT.",
+                    "",
+                    "**L'IUT ne publie de `.ics` que pour les sous-groupes** : les emplacements ICS",
+                    "du groupe et de l'année sont toujours vides. Les documents de groupe arrivent",
+                    "aussi souvent plus tard que celui de l'année.",
+                    "",
+                    "Rappel : seul le document d'année alimente cette API. Ceux des groupes et les",
+                    "`.ics` sont listés pour qui veut les consulter, mais leur contenu n'est pas fiable.",
+                ].join("\n"),
+                parameters: [
+                    {
+                        name: "group",
+                        in: "query",
+                        required: true,
+                        description: "Code de groupe, tel que rendu par `/api/v1/groups`.",
+                        schema: { type: "string" },
+                        example: "G8a",
+                    },
+                    {
+                        name: "start_at",
+                        in: "query",
+                        required: true,
+                        description: "Début de la semaine, en ISO 8601. La période couvre les sept jours qui suivent.",
+                        schema: { type: "string", format: "date-time" },
+                        example: "2026-09-06T22:00:00.000Z",
+                    },
+                ],
+                responses: {
+                    "200": okResponse("Les six emplacements de la semaine", "WeekSourcesResponse"),
+                    "400": errorResponse("`group` ou `start_at` manquant ou illisible"),
+                    "404": errorResponse("Groupe inconnu"),
+                },
             },
         },
 
@@ -319,6 +361,7 @@ export const swaggerDocument = {
             "RoomListResponse",
             "RoomAvailabilityResponse",
             "GroupListResponse",
+            "WeekSourcesResponse",
             "SyncStatusResponse",
             "SyncSummaryResponse",
         ),
