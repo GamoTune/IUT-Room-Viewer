@@ -5,12 +5,14 @@ import RoomsPage from "./pages/RoomsPage.vue";
 import SchedulePage from "./pages/SchedulePage.vue";
 import { useHashRoute } from "./composables/useHashRoute";
 
-const ROUTES = ["salles", "edt"] as const;
+// L'emploi du temps d'abord : c'est ce qu'on vient consulter le plus souvent.
+// L'ordre du tableau est celui de la navigation.
+const ROUTES = ["edt", "salles"] as const;
 type Route = (typeof ROUTES)[number];
 
-const { current, go } = useHashRoute<Route>(ROUTES, "salles");
+const { current, go } = useHashRoute<Route>(ROUTES, "edt");
 
-const PAGES = { salles: RoomsPage, edt: SchedulePage } as const;
+const PAGES = { edt: SchedulePage, salles: RoomsPage } as const;
 const page = computed(() => PAGES[current.value]);
 </script>
 

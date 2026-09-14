@@ -46,7 +46,7 @@
       "name": "web",
       "version": "0.1.0",
       "dependencies": {
-        "@gamo/ds": "^0.4.1",
+        "@gamo/ds": "^0.5.0",
         "vue": "^3.5.13",
       },
       "devDependencies": {
@@ -132,7 +132,7 @@
 
     "@esbuild/win32-x64": ["@esbuild/win32-x64@0.25.12", "", { "os": "win32", "cpu": "x64" }, "sha512-alJC0uCZpTFrSL0CCDjcgleBXPnCrEAhTBILpeAp7M/OFgoqtAetfBzX0xM00MUsVVPpVjlPuMbREqnZCXaTnA=="],
 
-    "@gamo/ds": ["@gamo/ds@0.4.1", "https://forge.gamo.one/api/packages/Gamotune/npm/%40gamo%2Fds/-/0.4.1/ds-0.4.1.tgz", { "peerDependencies": { "vue": "^3.5.0" } }, "sha512-7lSldT2dXRx4g9IeQwHaLfj1hGCjcD/RRkb4yTkKvQjUoWk2JDF+NP5MsOL0cZid0wAs5/xAEVABXu/rDehOYw=="],
+    "@gamo/ds": ["@gamo/ds@0.5.0", "https://forge.gamo.one/api/packages/Gamotune/npm/%40gamo%2Fds/-/0.5.0/ds-0.5.0.tgz", { "peerDependencies": { "vue": "^3.5.0" } }, "sha512-mlQ9kR9X83p3j1a4xgyx2lD0ozAbpJrZQqnVQJ8UcX1t1oHXRRgNvZzBizfgvixY3yh5CXXSEpohJFU40gKuPA=="],
 
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.6.0", "", {}, "sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw=="],
 
