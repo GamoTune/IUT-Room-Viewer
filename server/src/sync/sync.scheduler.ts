@@ -4,7 +4,7 @@
 // ============================================
 
 import cron from "node-cron";
-import { SyncService } from "../services/sync.service.js";
+import syncService from "./sync.service.js";
 
 /**
  * Planificateur de tâches pour la synchronisation automatique
@@ -13,7 +13,8 @@ import { SyncService } from "../services/sync.service.js";
 export class SyncScheduler {
     public static instance: SyncScheduler = new SyncScheduler();
 
-    private cronJob: cron.ScheduledTask | null = null;
+    private cronJob: ReturnType<typeof cron.schedule> | null = null;
+    private archiveJob: ReturnType<typeof cron.schedule> | null = null;
     private isStarted = false;
 
     /**
@@ -29,7 +30,7 @@ export class SyncScheduler {
         // Cron expression: toutes les 10 minutes
         this.cronJob = cron.schedule("*/10 * * * *", async () => {
             // Vérifier si une sync est déjà en cours
-            const status = SyncService.instance.getStatus();
+            const status = syncService.getStatus();
             if (status.isRunning) {
                 console.log("⏰ [CRON] Sync en cours, on passe ce cycle");
                 return;
@@ -37,26 +38,41 @@ export class SyncScheduler {
 
             console.log("\n⏰ [CRON] Synchronisation automatique déclenchée");
             try {
-                await SyncService.instance.syncAll();
+                await syncService.syncAll();
             } catch (error) {
                 console.error("❌ [CRON] Erreur lors de la synchronisation:", error);
             }
         });
 
+        // Les fichiers non exploités ne bougent qu'au fil des semaines : une
+        // vérification quotidienne suffit, et épargne le serveur de l'IUT.
+        this.archiveJob = cron.schedule("30 4 * * *", async () => {
+            if (syncService.getStatus().isRunning) return;
+
+            console.log("\n🗂️  [CRON] Archivage des fichiers non exploités");
+            try {
+                await syncService.syncAll({ archiveOthers: true });
+            } catch (error) {
+                console.error("❌ [CRON] Erreur lors de l'archivage:", error);
+            }
+        });
+
         this.isStarted = true;
-        console.log("🔄 Scheduler de synchronisation démarré (toutes les 10 min)");
+        console.log("🔄 Scheduler de synchronisation démarré (toutes les 10 min, archivage à 4h30)");
     }
 
     /**
      * Arrête le cron job
      */
     stop(): void {
-        if (this.cronJob) {
-            this.cronJob.stop();
-            this.cronJob = null;
-            this.isStarted = false;
-            console.log("⏹️  Scheduler de synchronisation arrêté");
-        }
+        if (!this.cronJob && !this.archiveJob) return;
+
+        this.cronJob?.stop();
+        this.archiveJob?.stop();
+        this.cronJob = null;
+        this.archiveJob = null;
+        this.isStarted = false;
+        console.log("⏹️  Scheduler de synchronisation arrêté");
     }
 
     /**

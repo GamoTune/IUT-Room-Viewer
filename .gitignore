@@ -74,6 +74,8 @@ web_modules/
 
 # dotenv environment variable files
 .env
+# Identifiants de déploiement : locaux à la machine, jamais versionnés.
+.env.deploy
 .env.development.local
 .env.test.local
 .env.production.local
@@ -135,3 +137,5 @@ prisma/migrations
 generated/
 /src/generated/prisma
 bun.lock
+# Archives des EDT publiés par l'IUT (PDF + ICS), regénérables par la sync
+server/data/backup/

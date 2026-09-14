@@ -3,73 +3,53 @@
 // Logique métier pour les salles
 // ============================================
 
-// On importe le repository (accès BDD)
-import { RoomRepository } from "../repository/room.repository.js";
-
-// On importe les types
-import type { Room, RoomWithLessons, RoomWithLessonsResponse, LessonFull, LessonResponse } from "../types/index.js";
+import lessonRepository from "../repository/lesson.repository.js";
+import { toLessonResponse } from "./lesson.mapper.js";
+import type { Room, RoomWithLessonsResponse } from "../types/index.js";
 
 /**
  * Service pour la logique métier des salles
- * 
- * Un service contient la LOGIQUE MÉTIER.
- * Il utilise les repositories pour accéder aux données.
  */
 export class RoomService {
     public static instance: RoomService = new RoomService();
 
     /**
-     * Récupère toutes les salles
+     * Récupère toutes les salles, dans l'ordre d'affichage (étage puis numéro)
      */
     async getAllRooms(): Promise<Room[]> {
-        return RoomRepository.instance.findAll();
+        return lessonRepository.findAllRooms();
     }
 
     /**
-     * Récupère les salles avec les cours correspondants, sur une période donnée
+     * Récupère les salles avec les cours qui les occupent sur une période donnée.
+     *
+     * Toutes les salles du référentiel sont renvoyées, y compris celles sans
+     * cours : une salle libre est une information, pas une absence.
      */
     async getRoomsAvailability(startTime: Date, endTime: Date): Promise<RoomWithLessonsResponse[]> {
-        const rooms = await RoomRepository.instance.findAllRoomsWithLessonsInTimeRange(startTime, endTime);
-        if (!rooms) {
-            return [];
+        const [rooms, lessons, census] = await Promise.all([
+            lessonRepository.findAllRooms(),
+            lessonRepository.findMany({ from: startTime, to: endTime, mode: "overlap" }),
+            lessonRepository.loadGroupCensus(),
+        ]);
+
+        // Un cours peut occuper deux salles à la fois (`108-9`)
+        const lessonsByRoom = new Map<number, ReturnType<typeof toLessonResponse>[]>();
+
+        for (const lesson of lessons) {
+            const response = toLessonResponse(lesson, census);
+
+            for (const room of lesson.rooms ?? []) {
+                const existing = lessonsByRoom.get(room.id);
+                if (existing) existing.push(response);
+                else lessonsByRoom.set(room.id, [response]);
+            }
         }
-        return rooms.map(room => this.transformRoomToResponse(room));
-    }
 
-    /**
-     * Transforme une salle avec ses cours en format de réponse API
-     * Utilise lesson_room pour accéder aux cours (many-to-many)
-     */
-    private transformRoomToResponse(room: RoomWithLessons): RoomWithLessonsResponse {
-        // Extraire les cours depuis lesson_room
-        const lessons = room.lesson_room.map(lr => lr.lesson);
-
-        return {
+        return rooms.map((room) => ({
             id: room.id,
             name: room.name,
-            lessons: lessons.map(lesson => this.transformLessonToResponse(lesson)),
-        };
-    }
-
-    /**
-     * Transforme un cours complet en format de réponse API
-     * rooms est maintenant un tableau de noms de salles
-     */
-    private transformLessonToResponse(lesson: LessonFull): LessonResponse {
-        return {
-            id: lesson.id,
-            type: lesson.type,
-            startTime: lesson.start_datetime.toISOString(),
-            endTime: lesson.end_datetime.toISOString(),
-            rooms: lesson.lesson_room.map(lr => lr.room.name),
-            teacher: lesson.teacher?.name ?? null,
-            contentCode: lesson.content.code,
-            contentName: lesson.content.name,
-            groups: lesson.lesson_group.map(lg => ({
-                mainGroup: lg.group.main_group,
-                subGroup: lg.group.sub_group,
-            })),
-        };
+            lessons: lessonsByRoom.get(room.id) ?? [],
+        }));
     }
 }
-

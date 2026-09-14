@@ -1,0 +1,111 @@
+name: Déployer le site
+
+# Déploiement du front (`web/`) vers l'hébergement mutualisé OVH, sur tag
+# `web-v*`.
+#
+#   cd web && bun pm version minor      # ou éditer web/package.json
+#   git tag web-v0.2.0 && git push --follow-tags
+#
+# Le tag est préfixé parce que le dépôt porte trois paquets : `web-v*` ne
+# déclenche que le front, laissant `v*` disponible pour le serveur et le bot.
+#
+# Le mutualisé n'exécute ni Bun ni Node : le build a lieu dans un worker LXC
+# jetable, seul `web/dist/` part. Le transfert passe par SFTP et non rsync —
+# l'hébergement mutualisé n'offre pas de shell distant.
+#
+# ┌─ PRÉREQUIS CÔTÉ FORGE ─────────────────────────────────────────────────────┐
+# │ Secret  DEPLOY_HOST       → sftp.clusterXXX.hosting.ovh.net (sans schéma)  │
+# │ Secret  DEPLOY_USER       → identifiant SFTP OVH                           │
+# │ Secret  DEPLOY_PASSWORD   → mot de passe SFTP OVH                          │
+# │ Var     DEPLOY_PATH       → docroot du sous-domaine, relatif au home       │
+# │ Var     API_BASE_URL      → racine publique de l'API, sans barre finale    │
+# └────────────────────────────────────────────────────────────────────────────┘
+#
+# Aucun `.htaccess` n'est nécessaire : le routage est par hash (`#/salles`), il
+# ne quitte jamais le navigateur. Une seule page est servie, `index.html`.
+#
+# `delete` suppose un docroot dédié à ce site. Si le sous-domaine partage son
+# dossier avec autre chose, ajouter les exclusions ici, comme le fait gamo.one.
+
+on:
+  push:
+    tags:
+      - "web-v*"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: native
+    timeout-minutes: 20
+
+    steps:
+      # Sur l'orchestrateur, avant de payer une création de worker et un build.
+      - name: Vérifier les prérequis
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
+          # Sans elle, le site déployé interrogerait sa propre origine, où il n'y
+          # a pas d'API : autant échouer ici plutôt que dans le navigateur.
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+        run: |
+          for nom in DEPLOY_HOST DEPLOY_USER DEPLOY_PASSWORD API_BASE_URL; do
+            [ -n "${!nom}" ] || { echo "$nom absent." >&2; exit 1; }
+          done
+
+      - uses: Gamotune/ci-actions/lxc/up@v1
+      - uses: Gamotune/ci-actions/lxc/checkout@v1
+
+      - name: Vérifier que le tag suit web/package.json
+        uses: Gamotune/ci-actions/lxc/run@v1
+        env:
+          TAG: ${{ github.ref_name }}
+        with:
+          forward: TAG
+          run: |
+            VERSION=$(bun -e 'console.log(require("./web/package.json").version)')
+            [ "$VERSION" = "${TAG#web-v}" ] || {
+              echo "Tag $TAG incohérent avec la version $VERSION de web/package.json" >&2
+              exit 1
+            }
+
+      - name: Construire le front
+        uses: Gamotune/ci-actions/lxc/run@v1
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+        with:
+          forward: API_BASE_URL
+          run: |
+            # Installation à la racine : les dépendances du front sont résolues
+            # par les workspaces Bun, pas depuis web/.
+            bun install --frozen-lockfile
+            VITE_API_BASE_URL="$API_BASE_URL" bun --filter web build
+
+      - name: Contrôler ce qui va partir
+        uses: Gamotune/ci-actions/lxc/run@v1
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+        with:
+          working-directory: /work/web
+          forward: API_BASE_URL
+          run: |
+            test -f dist/index.html || { echo "dist/index.html manquant" >&2; exit 1; }
+            grep -q "$API_BASE_URL" dist/assets/*.js || {
+              echo "La racine de l'API n'est pas dans le bundle : build sans VITE_API_BASE_URL ?" >&2
+              exit 1
+            }
+
+      - name: Envoyer vers l'hébergement
+        uses: Gamotune/ci-actions/lxc/deploy-sftp@v1
+        with:
+          working-directory: /work/web
+          host: ${{ secrets.DEPLOY_HOST }}
+          user: ${{ secrets.DEPLOY_USER }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          source: dist/
+          target: ${{ vars.DEPLOY_PATH || 'www' }}
+          delete: true
+
+      - uses: Gamotune/ci-actions/lxc/down@v1
+        if: always()

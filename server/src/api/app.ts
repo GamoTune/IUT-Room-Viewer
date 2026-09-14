@@ -7,6 +7,7 @@ import express from "express";
 import swaggerUi from "swagger-ui-express";
 
 // Import des routes v1
+import { groupRoutes } from "./v1/index.js";
 import { roomRoutes } from "./v1/index.js";
 import { syncRoutes } from "./v1/index.js";
 import { scheduleRoutes } from "./v1/index.js";
@@ -92,8 +93,10 @@ app.get("/", (_req, res) => {
             health: "/health",
             v1: {
                 rooms: "/api/v1/rooms",
-                sync: "/api/v1/sync",
+                availability: "/api/v1/rooms/availability",
+                groups: "/api/v1/groups",
                 schedule: "/api/v1/schedule",
+                sync: "/api/v1/sync",
                 stats: "/api/v1/stats",
             },
             v2: {
@@ -107,6 +110,7 @@ app.get("/", (_req, res) => {
 // ============= Routes v1 ====================
 
 app.use("/api/v1/rooms", roomRoutes);
+app.use("/api/v1/groups", groupRoutes);
 app.use("/api/v1/sync", syncRoutes);
 app.use("/api/v1/schedule", scheduleRoutes);
 app.use("/api/v1/stats", statsRoutes);

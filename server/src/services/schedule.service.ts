@@ -2,7 +2,7 @@
  * Schedule Service
  * Logique métier pour l'emploi du temps
  */
-import { getLessonsByGroup, parseGroupName, type ScheduleFilter } from "../repository/schedule.repository.js";
+import lessonRepository from "../repository/lesson.repository.js";
 import type { Course, ScheduleQuery, ScheduleResponse } from "../types/schedule.types.js";
 
 /**
@@ -19,14 +19,28 @@ function getYearFromGroup(mainGroup: number): string {
 }
 
 /**
- * Convertit une année BUT en identifiant mainGroup négatif
- * BUT1 -> -1, BUT2 -> -2, BUT3 -> -3
+ * Extrait le numéro de groupe principal d'un libellé (`G3` → 3).
  */
-function getYearMainGroup(year: string): number {
-    if (year === "BUT1") return -1;
-    if (year === "BUT2") return -2;
-    if (year === "BUT3") return -3;
-    return -1; // Par défaut
+export function parseGroupName(group: string): number {
+    const matched = group.match(/[GAga]?(\d+)/);
+    return matched?.[1] ? Number.parseInt(matched[1], 10) : 1;
+}
+
+/**
+ * Codes de groupes à interroger pour une demande.
+ *
+ * Les emplois du temps n'existent que par sous-groupe : sans précision de TP,
+ * on interroge les deux (`G3a` et `G3b`), ce qui restitue bien les cours
+ * communs, chaque cours n'étant stocké qu'une fois.
+ */
+function resolveGroupCodes(mainGroup: number, tp?: string): string[] {
+    const suffix = tp?.trim().toLowerCase();
+
+    if (suffix === "a" || suffix === "b") {
+        return [`G${mainGroup}${suffix}`];
+    }
+
+    return [`G${mainGroup}a`, `G${mainGroup}b`];
 }
 
 /**
@@ -43,48 +57,33 @@ export async function getScheduleForGroup(query: ScheduleQuery): Promise<Schedul
     const endDate = new Date(targetDate);
     endDate.setHours(23, 59, 59, 999);
 
-    // Convertir le nom du groupe en identifiants numériques
-    const { mainGroup, subGroup } = parseGroupName(group, tp);
-
-    // Déduire l'année à partir du groupe
+    const mainGroup = parseGroupName(group);
     const year = getYearFromGroup(mainGroup);
-    const yearMainGroup = getYearMainGroup(year);
 
-    // Récupérer les leçons
-    const filter: ScheduleFilter = {
-        mainGroup,
-        subGroup,
-        yearMainGroup,
-        startDate,
-        endDate,
-    };
-
-    const lessons = await getLessonsByGroup(filter);
+    const lessons = await lessonRepository.findMany({
+        from: startDate,
+        to: endDate,
+        mode: "start",
+        groupCodes: resolveGroupCodes(mainGroup, tp),
+    });
 
     // Transformer en format Course
     const courses: Course[] = lessons.map((lesson) => {
-        // Récupérer le code et le titre depuis content
-        const code = lesson.content?.code || "";
-        const title = lesson.content?.name || "Cours";
+        const code = lesson.subject.code;
+        const title = lesson.subject.label;
 
-        // Récupérer les salles
-        const rooms = lesson.lesson_room
-            ?.map((lr) => lr.room?.name)
-            .filter((name): name is string => Boolean(name))
-            .join(", ") || "N/A";
-
-        // Récupérer le nom du professeur
-        const teacherName = lesson.teacher?.name || undefined;
+        const rooms = (lesson.rooms ?? []).map((room) => room.name).join(", ") || "N/A";
+        const teacherName = lesson.teacher?.name ?? undefined;
 
         return {
             id: lesson.id,
             code,
             title,
-            startTime: lesson.start_datetime.toISOString(),
-            endTime: lesson.end_datetime.toISOString(),
+            startTime: lesson.startUtc.toISOString(),
+            endTime: lesson.endUtc.toISOString(),
             room: rooms,
             teacher: teacherName,
-            type: detectCourseType(title, lesson.type),
+            type: detectCourseType(title, lesson.type, code),
         };
     });
 
@@ -92,16 +91,20 @@ export async function getScheduleForGroup(query: ScheduleQuery): Promise<Schedul
         group,
         year,
         tp,
-        date: targetDate.toISOString().split("T")[0],
+        date: targetDate.toISOString().split("T")[0]!,
         courses,
     };
 }
 
 /**
- * Détecte le type de cours à partir du titre et du type de leçon
+ * Détecte le type de cours à partir du code, du type de leçon et du titre
  */
-function detectCourseType(title: string, lessonType?: string): Course["type"] {
-    // Vérifier d'abord le type de la leçon si disponible
+function detectCourseType(title: string, lessonType?: string, code?: string): Course["type"] {
+    // Une SAÉ se reconnaît à son code (`S3.01`, `S5A.01`), pas à son type :
+    // les documents la publient comme un TD ou un cours ordinaire.
+    if (code && /^S\d/i.test(code)) return "SAE";
+
+    // Vérifier ensuite le type de la leçon si disponible
     if (lessonType) {
         const upperType = lessonType.toUpperCase();
         if (upperType === "CM") return "CM";
