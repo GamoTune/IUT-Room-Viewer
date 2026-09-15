@@ -31,10 +31,11 @@ const TYPE_MAP: Record<string, LessonType> = {
 };
 
 /**
- * Un code de matière : `R1.01`, `S5A.01`, `R3.08`, et les codes non numériques
- * que l'IUT emploie pour les temps hors module — `S3.St` pour le stage.
+ * Un code de matière : `R1.01`, `S5A.01`, `R3.08`, `P5A.01` pour le portfolio,
+ * et les codes non numériques que l'IUT emploie pour les temps hors module —
+ * `S3.St` pour le stage.
  */
-const SUBJECT_CODE = /^[RS]\d[A-Z]?\.[A-Za-z0-9]{2,3}$/;
+const SUBJECT_CODE = /^[PRS]\d[A-Z]?\.[A-Za-z0-9]{2,3}$/;
 
 /**
  * Une SAÉ se distingue d'une ressource par son préfixe : `S5A.01` contre
