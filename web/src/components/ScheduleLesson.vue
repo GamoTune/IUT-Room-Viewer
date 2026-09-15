@@ -9,15 +9,15 @@ const { course, span } = defineProps<{
 }>();
 
 // La hauteur d'une case est fixe : on choisit ce qui rentre plutôt que de
-// laisser le contenu repousser la grille. Une demi-heure tient sur une ligne,
-// chaque tranche en plus débloque une information.
+// laisser le contenu repousser la grille. Une demi-heure tient sur une ligne ;
+// jusqu'à une heure, l'intitulé suit le code sur la même ligne ; au-delà, il
+// passe dessous et gagne des lignes avec la durée.
 const compact = computed(() => span < 2);
-const showCode = computed(() => span >= 4 && hasOwnTitle.value);
-const titleLines = computed(() => Math.min(Math.max(span - 1, 1), 3));
+const inline = computed(() => span < 3);
+const titleLines = computed(() => Math.min(span - 1, 3));
 
-/** L'IUT reprend parfois le code en guise d'intitulé : on ne le répète pas. */
+/** Une matière hors programme national n'a parfois que son code : on ne le répète pas. */
 const hasOwnTitle = computed(() => course.title.trim() !== "" && course.title.trim() !== course.code);
-const title = computed(() => (hasOwnTitle.value ? course.title : course.code));
 
 const hours = computed(() => {
     const format = (value: string) =>
@@ -57,7 +57,7 @@ const type = computed(() => (course.type && course.type !== "OTHER" ? course.typ
 <template>
     <article
         class="lesson"
-        :class="[`lesson--${accent}`, { 'lesson--compact': compact }]"
+        :class="[`lesson--${accent}`, { 'lesson--compact': compact, 'lesson--inline': inline }]"
         :style="{ '--title-lines': titleLines }"
         :title="`${course.code} · ${course.title} · ${hours}${rooms ? ` · ${rooms}` : ''}`"
     >
@@ -67,8 +67,10 @@ const type = computed(() => (course.type && course.type !== "OTHER" ? course.typ
         </span>
 
         <span v-else-if="type" class="lesson__type">{{ type }}</span>
-        <strong class="lesson__title">{{ title }}</strong>
-        <span v-if="showCode" class="lesson__code">{{ course.code }}</span>
+        <span class="lesson__subject">
+            <strong class="lesson__code">{{ course.code }}</strong>
+            <span v-if="hasOwnTitle" class="lesson__title">{{ course.title }}</span>
+        </span>
 
         <span v-if="rooms || (teacher && !compact)" class="lesson__place">
             <span v-if="rooms" class="lesson__room">{{ rooms }}</span>
@@ -141,20 +143,28 @@ const type = computed(() => (course.type && course.type !== "OTHER" ? course.typ
     white-space: nowrap;
 }
 
-/* La matière est ce qu'on cherche du regard : c'est elle qui porte le poids. */
+.lesson__subject {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+/* Le code est court et toujours entier : c'est lui qu'on repère du regard.
+   L'intitulé officiel, souvent long, le précise en petit. */
+.lesson__code {
+    color: var(--text);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
 .lesson__title {
     display: -webkit-box;
     overflow: hidden;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: var(--title-lines);
-    color: var(--text);
-    font-size: var(--fs-sm);
-    font-weight: 600;
+    color: color-mix(in srgb, var(--text) 80%, transparent);
     overflow-wrap: anywhere;
-}
-
-.lesson__code {
-    color: var(--muted);
 }
 
 /* La salle et le prof suivent directement la matière : la case se lit d'un
@@ -175,6 +185,22 @@ const type = computed(() => (course.type && course.type !== "OTHER" ? course.typ
     color: var(--muted);
 }
 
+/* Jusqu'à une heure, pas la place d'une ligne de plus : l'intitulé suit le
+   code et s'arrête où la case s'arrête. */
+.lesson--inline .lesson__subject {
+    flex-direction: row;
+    align-items: baseline;
+    gap: var(--s1);
+}
+
+.lesson--inline .lesson__title {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* Une demi-heure : tout sur une ligne, la salle poussée à droite. */
 .lesson--compact {
     flex-direction: row;
@@ -184,11 +210,11 @@ const type = computed(() => (course.type && course.type !== "OTHER" ? course.typ
     white-space: nowrap;
 }
 
-.lesson--compact .lesson__title {
-    display: block;
+.lesson--compact .lesson__subject {
     flex: 1;
-    min-width: 0;
-    text-overflow: ellipsis;
+}
+
+.lesson--compact .lesson__code {
     font-size: var(--fs-xs);
 }
 
