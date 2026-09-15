@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
-import { Alert, Button, EmptyState, SectionHeader, Skeleton, Surface } from "@gamo/ds";
+import { Alert, Button, EmptyState, SectionHeader, Skeleton, Slider, Surface } from "@gamo/ds";
 import FreshnessBadge from "../components/FreshnessBadge.vue";
 import GroupSelect from "../components/GroupSelect.vue";
 import RoomStatus from "../components/RoomStatus.vue";
@@ -65,22 +65,6 @@ const mineCount = computed(() =>
 );
 
 const loading = computed(() => totalCount.value === 0 && freshness.value === "revalidating");
-
-/** Les curseurs natifs rendent une chaîne : le composable attend des minutes. */
-const onStart = (event: Event): void => picker.setStart(Number((event.target as HTMLInputElement).value));
-const onDuration = (event: Event): void => picker.setDuration(Number((event.target as HTMLInputElement).value));
-
-/**
- * Part remplie de la piste. La piste étant redessinée, le navigateur ne colore
- * plus lui-même la portion parcourue : il faut la lui donner.
- */
-function fill(value: number, min: number, max: number): string {
-    if (max <= min) return "0%";
-    return `${((value - min) / (max - min)) * 100}%`;
-}
-
-const startFill = computed(() => fill(picker.start.value, DAY_START_MINUTES, picker.maxStart.value));
-const durationFill = computed(() => fill(picker.duration.value, MIN_DURATION_MINUTES, MAX_DURATION_MINUTES));
 </script>
 
 <template>
@@ -106,40 +90,28 @@ const durationFill = computed(() => fill(picker.duration.value, MIN_DURATION_MIN
                 <Button ghost size="sm" @click="picker.shiftDay(1)">Jour suivant →</Button>
             </div>
 
-            <label class="picker__field">
-                <span class="picker__label">
-                    Début <strong>{{ formatTime(picker.start.value) }}</strong>
-                </span>
-                <input
-                    class="picker__slider"
-                    type="range"
-                    :min="DAY_START_MINUTES"
-                    :max="picker.maxStart.value"
-                    :step="SLOT_MINUTES"
-                    :value="picker.start.value"
-                    :style="{ '--fill': startFill }"
-                    :aria-valuetext="formatTime(picker.start.value)"
-                    @input="onStart"
-                />
-            </label>
+            <Slider
+                :model-value="picker.start.value"
+                :min="DAY_START_MINUTES"
+                :max="picker.maxStart.value"
+                :step="SLOT_MINUTES"
+                :format="formatTime"
+                @update:model-value="picker.setStart"
+            >
+                Début
+            </Slider>
 
-            <label class="picker__field">
-                <span class="picker__label">
-                    Durée <strong>{{ formatDuration(picker.duration.value) }}</strong>
-                    <span class="picker__hint">jusqu'à {{ picker.endLabel.value }}</span>
-                </span>
-                <input
-                    class="picker__slider"
-                    type="range"
-                    :min="MIN_DURATION_MINUTES"
-                    :max="MAX_DURATION_MINUTES"
-                    :step="SLOT_MINUTES"
-                    :value="picker.duration.value"
-                    :style="{ '--fill': durationFill }"
-                    :aria-valuetext="formatDuration(picker.duration.value)"
-                    @input="onDuration"
-                />
-            </label>
+            <Slider
+                :model-value="picker.duration.value"
+                :min="MIN_DURATION_MINUTES"
+                :max="MAX_DURATION_MINUTES"
+                :step="SLOT_MINUTES"
+                :format="formatDuration"
+                @update:model-value="picker.setDuration"
+            >
+                Durée
+                <template #hint>jusqu'à {{ picker.endLabel.value }}</template>
+            </Slider>
         </Surface>
 
         <Alert v-if="freshness === 'stale'" variant="warning">
@@ -239,93 +211,6 @@ const durationFill = computed(() => fill(picker.duration.value, MIN_DURATION_MIN
 
 .picker__date {
     font-weight: 600;
-}
-
-.picker__field {
-    display: flex;
-    flex-direction: column;
-    gap: var(--s2);
-}
-
-.picker__label {
-    display: flex;
-    align-items: baseline;
-    gap: var(--s2);
-    color: var(--muted);
-    font-size: var(--fs-sm);
-}
-
-.picker__label strong {
-    color: var(--text);
-    font-family: var(--font-mono);
-    font-variant-numeric: tabular-nums;
-}
-
-.picker__hint {
-    margin-left: auto;
-}
-
-/* Le design system n'a pas de curseur : celui-ci reprend ses tokens. Le rendu
-   natif est neutralisé — sa piste porte un liseré clair qui jure sur un fond
-   sombre — donc piste et poignée sont redessinées, remplissage compris. */
-.picker__slider {
-    --track-height: 0.375rem;
-    --thumb-size: 1rem;
-
-    -webkit-appearance: none;
-    appearance: none;
-    width: 100%;
-    height: var(--thumb-size);
-    margin: 0;
-    border: 0;
-    background: transparent;
-    cursor: pointer;
-}
-
-.picker__slider::-webkit-slider-runnable-track {
-    height: var(--track-height);
-    border: 0;
-    border-radius: var(--radius-full, 999px);
-    background: linear-gradient(to right, var(--lav) 0 var(--fill), var(--border) var(--fill) 100%);
-}
-
-.picker__slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: var(--thumb-size);
-    height: var(--thumb-size);
-    /* Recentre la poignée sur une piste plus fine qu'elle. */
-    margin-top: calc((var(--track-height) - var(--thumb-size)) / 2);
-    border: 0;
-    border-radius: 50%;
-    background: var(--lav);
-}
-
-.picker__slider::-moz-range-track {
-    height: var(--track-height);
-    border: 0;
-    border-radius: var(--radius-full, 999px);
-    background: var(--border);
-}
-
-.picker__slider::-moz-range-progress {
-    height: var(--track-height);
-    border-radius: var(--radius-full, 999px);
-    background: var(--lav);
-}
-
-.picker__slider::-moz-range-thumb {
-    width: var(--thumb-size);
-    height: var(--thumb-size);
-    border: 0;
-    border-radius: 50%;
-    background: var(--lav);
-}
-
-.picker__slider:focus-visible {
-    outline: 2px solid var(--lav);
-    outline-offset: 4px;
-    border-radius: var(--radius-sm);
 }
 
 .rooms__summary {

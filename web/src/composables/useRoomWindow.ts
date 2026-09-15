@@ -13,6 +13,7 @@ export const SLOT_MINUTES = 30;
 /** Durées proposées : d'une demi-heure à huit heures. */
 export const MIN_DURATION_MINUTES = SLOT_MINUTES;
 export const MAX_DURATION_MINUTES = 8 * 60;
+const DEFAULT_DURATION_MINUTES = 2 * 60;
 
 export interface RoomWindow {
     from: Date;
@@ -37,12 +38,16 @@ export function formatDuration(minutes: number): string {
     return rest === 0 ? `${hours}h` : `${hours}h${String(rest).padStart(2, "0")}`;
 }
 
-/** Demi-heure entamée : à 11:24, on propose 11:00. */
-function currentSlot(): number {
+/**
+ * Demi-heure entamée : à 11:24, on propose 11:00. Le créneau doit tenir avant
+ * la fin de journée : en soirée, on recule son début plutôt que d'afficher une
+ * heure que le curseur ne peut pas atteindre.
+ */
+function currentSlot(duration: number): number {
     const now = new Date();
     const minutes = now.getHours() * 60 + now.getMinutes();
     const floored = Math.floor(minutes / SLOT_MINUTES) * SLOT_MINUTES;
-    return Math.min(Math.max(floored, DAY_START_MINUTES), DAY_END_MINUTES - MIN_DURATION_MINUTES);
+    return Math.min(Math.max(floored, DAY_START_MINUTES), DAY_END_MINUTES - duration);
 }
 
 function isToday(day: Date): boolean {
@@ -76,8 +81,8 @@ export function useRoomWindow(): {
     now: () => void;
 } {
     const day = ref(startOfDay(new Date()));
-    const start = ref(currentSlot());
-    const duration = ref(2 * 60);
+    const duration = ref(DEFAULT_DURATION_MINUTES);
+    const start = ref(currentSlot(duration.value));
 
     /** `true` dès qu'un curseur a bougé : le créneau ne suit plus l'heure. */
     const slotChosen = ref(false);
@@ -129,8 +134,8 @@ export function useRoomWindow(): {
     const now = (): void => {
         slotChosen.value = false;
         day.value = startOfDay(new Date());
-        start.value = currentSlot();
-        duration.value = 2 * 60;
+        duration.value = DEFAULT_DURATION_MINUTES;
+        start.value = currentSlot(duration.value);
     };
 
     return { day, start, duration, maxStart, endLabel, window, setStart, setDuration, shiftDay, now };
