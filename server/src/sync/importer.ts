@@ -14,6 +14,7 @@ import { StudentGroup } from "../entities/studentGroup.entity.js";
 import { Subject } from "../entities/subject.entity.js";
 import { Teacher } from "../entities/teacher.entity.js";
 import { parseGroupCode } from "./groups.js";
+import { officialSubjectLabel } from "./subjects.reference.js";
 import type { ParsedLesson, SourceFile } from "./types.js";
 import type { Year } from "../entities/enums.js";
 
@@ -151,9 +152,11 @@ export class Importer {
             .map((name) => caches.rooms.get(name))
             .filter((room): room is Room => room !== undefined);
 
-        // Avant le dédoublonnage : un cours déjà connu peut apporter l'intitulé
-        // qu'une case compacte n'avait pas donné à sa matière.
-        const subject = await this.upsertSubject(caches, parsed.subjectCode, parsed.subjectLabel);
+        // Avant le dédoublonnage : un cours déjà connu doit aussi pouvoir corriger
+        // l'intitulé de sa matière. Le programme national fait foi ; le texte de
+        // la case ne sert qu'aux codes qu'il ne connaît pas.
+        const label = officialSubjectLabel(parsed.subjectCode) ?? parsed.subjectLabel;
+        const subject = await this.upsertSubject(caches, parsed.subjectCode, label);
 
         const existing = await lessons.findOne({ where: { dedupKey }, relations: { rooms: true } });
         if (existing) {
