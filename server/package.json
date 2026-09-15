@@ -10,8 +10,8 @@
     "db:revert": "bun node_modules/typeorm/cli.js migration:revert -d src/utils/dataSource.ts",
     "db:seed": "bun src/cli/seed.ts",
     "sync": "bun src/cli/sync.ts",
-    "test": "bun test",
-    "test:watch": "bun test --watch",
+    "test": "bun test --isolate",
+    "test:watch": "bun test --watch --isolate",
     "typecheck": "tsc --noEmit -p tsconfig.test.json",
     "coverage": "bun scripts/coverage.ts"
   },

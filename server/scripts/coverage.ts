@@ -25,7 +25,13 @@ const exclusions: string[] = (config as { test?: { coveragePathIgnorePatterns?: 
 const motifs = exclusions.map((motif) => new Bun.Glob(motif));
 const exclu = (chemin: string) => motifs.some((motif) => motif.match(chemin) || motif.match(`/${chemin}`));
 
-const exécution = Bun.spawnSync(["bun", "test"], { stdout: "inherit", stderr: "inherit" });
+/**
+ * `--isolate` donne à chaque fichier de test son propre registre de modules. Sans lui, les
+ * `mock.module` de `sync.service.spec.ts` fuient vers les fichiers qui passent après lui : or
+ * l'ordre des fichiers dépend du système de fichiers (après eux sur macOS, avant sur le runner
+ * Linux de la CI). L'option n'est pas lue depuis bunfig.toml, d'où sa présence ici.
+ */
+const exécution = Bun.spawnSync(["bun", "test", "--isolate"], { stdout: "inherit", stderr: "inherit" });
 
 if (exécution.exitCode !== 0) {
     console.error("\n❌ Des tests échouent : la couverture n'est pas évaluée.");

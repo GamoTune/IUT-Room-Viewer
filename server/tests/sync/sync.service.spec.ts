@@ -1,12 +1,12 @@
 // ============================================
 // 📁 tests/sync/sync.service.spec.ts
 //
-// Les dépendances de la chaîne — listing, téléchargement, lecture des PDF et
-// import — sont remplacées : c'est l'enchaînement qui est éprouvé ici, pas
-// leurs implémentations, testées chacune de leur côté.
+// Les dépendances de la chaîne — listing, téléchargement et import — sont
+// remplacées : c'est l'enchaînement qui est éprouvé ici, pas leurs
+// implémentations, testées chacune de leur côté.
 // ============================================
 
-import { afterAll, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import type { SourceFile } from "../../src/sync/types.js";
 
 const discoverFiles = mock<() => Promise<SourceFile[]>>(async () => []);
@@ -22,16 +22,16 @@ const importer = {
 
 const loadRooms = mock(async () => undefined);
 
-// Les vrais modules sont gardés sous la main : `mock.module` remplace le module
-// pour tout le processus, et `mock.restore` ne le défait pas. Sans la remise en
-// place ci-dessous, les autres fichiers de test recevraient ces doublures.
+// `mock.module` remplace le module pour tout le processus, et ni `mock.restore`
+// ni un second `mock.module` en `afterAll` ne le défont pour les fichiers
+// suivants. Ce fichier ne reste sans effet sur les autres que parce que
+// `bun test` est lancé avec `--isolate` (voir package.json et
+// scripts/coverage.ts) : un simple `bun test` le fait fuir selon l'ordre des
+// fichiers.
 //
-// `pdf/parse.js` n'est volontairement pas remplacé : la doublure fuirait vers
-// le test du parseur, qui s'exécute après celui-ci. La chaîne lit donc une vraie
+// `pdf/parse.js` n'est volontairement pas remplacé : la chaîne lit une vraie
 // archive, ce qui éprouve au passage le branchement du parseur.
 const vraiListing = await import("../../src/sync/listing.js");
-const vraiFetcher = await import("../../src/sync/fetcher.js");
-const vraiImporter = await import("../../src/sync/importer.js");
 
 mock.module("../../src/sync/listing.js", () => ({ ...vraiListing, discoverFiles }));
 mock.module("../../src/sync/fetcher.js", () => ({ fetchDocument }));
@@ -43,12 +43,6 @@ mock.module("../../src/sync/importer.js", () => ({
 }));
 
 const { SyncService } = await import("../../src/sync/sync.service.js");
-
-afterAll(() => {
-    mock.module("../../src/sync/listing.js", () => vraiListing);
-    mock.module("../../src/sync/fetcher.js", () => vraiFetcher);
-    mock.module("../../src/sync/importer.js", () => vraiImporter);
-});
 
 /** Un fichier du listing. `scope === year` en fait un emploi du temps d'année. */
 function fichier(scope: string, year = "A3", format = "pdf", weekNumber = 1): SourceFile {
