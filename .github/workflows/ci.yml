@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Même version qu'en local : un écart de Bun change le résolveur, le runner de
+  # tests et le rapport de couverture.
+  BUN_VERSION: "1.3.14"
+
+jobs:
+  server:
+    name: Serveur - Type, Lint, Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: server
+    env:
+      DATABASE_URL: postgres://ci:ci@127.0.0.1:1/ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Mettre en cache les paquets
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
+      - name: Installer les dépendances
+        working-directory: .
+        run: bun install --frozen-lockfile
+
+      - name: Vérification des types
+        run: bun run typecheck
+
+      - name: Tests et seuil de couverture
+        run: bun run coverage
+
+      - name: Publier le rapport de couverture
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-server
+          path: server/coverage/lcov.info
+          if-no-files-found: ignore
+          retention-days: 14
