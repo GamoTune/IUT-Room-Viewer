@@ -58,6 +58,15 @@ describe("readCell — forme compacte", () => {
         expect(readCell(["S3.St - AP - 111"]).subjectCode).toBe("S3.St");
     });
 
+    it("accepte un code de portfolio", () => {
+        // Sans le `P`, la case tombait en mode dégradé et le cours n'était pas importé.
+        const lu = readCell(["P5A.01 - AP - 103"]);
+        expect(lu.degraded).toBe(false);
+        expect(lu.subjectCode).toBe("P5A.01");
+        expect(lu.teacherName).toBe("AP");
+        expect(lu.roomNames).toEqual(["103"]);
+    });
+
     it("bascule en forme détaillée si le code n'en est pas un", () => {
         // Trois segments mais un code non conforme : ce n'est pas la forme compacte.
         const lu = readCell(["Réunion - SM - 111"]);
