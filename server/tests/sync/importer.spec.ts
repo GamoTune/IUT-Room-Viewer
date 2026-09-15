@@ -281,6 +281,46 @@ describe("Importer", () => {
         });
     });
 
+    describe("intitulé des matières", () => {
+        it("garde l'intitulé en base face à une case qui ne donne que le code", async () => {
+            dépôt(Subject).findOneBy.mockResolvedValue({ id: 7, code: "R5A.14", label: "Anglais" });
+
+            await Importer.instance.importLessons(caches, source, [parsed({ subjectLabel: "R5A.14" })], "A3");
+
+            expect(dépôt(Subject).save).not.toHaveBeenCalled();
+        });
+
+        it("remplace un intitulé qui n'était que le code", async () => {
+            dépôt(Subject).findOneBy.mockResolvedValue({ id: 7, code: "R5A.14", label: "R5A.14" });
+
+            await Importer.instance.importLessons(caches, source, [parsed()], "A3");
+
+            expect(dépôt(Subject).save).toHaveBeenCalledWith({ id: 7, code: "R5A.14", label: "Anglais" });
+        });
+
+        it("retient l'intitulé lu après une case compacte dans le même passage", async () => {
+            await Importer.instance.importLessons(
+                caches,
+                source,
+                [parsed({ subjectLabel: "R5A.14" }), parsed({ start: new Date("2026-09-11T06:00:00.000Z") })],
+                "A3",
+            );
+
+            const dernier = dépôt(Subject).save.mock.calls.at(-1)![0] as { label: string };
+            expect(dernier.label).toBe("Anglais");
+            expect(dépôt(Subject).findOneBy).toHaveBeenCalledTimes(1);
+        });
+
+        it("répare l'intitulé même quand le cours est déjà enregistré", async () => {
+            dépôt(Lesson).findOne.mockResolvedValue({ id: 5, rooms: [] });
+            dépôt(Subject).findOneBy.mockResolvedValue({ id: 7, code: "R5A.14", label: "R5A.14" });
+
+            await Importer.instance.importLessons(caches, source, [parsed({ roomNames: [] })], "A3");
+
+            expect(dépôt(Subject).save).toHaveBeenCalled();
+        });
+    });
+
     describe("deleteOrphanLessons", () => {
         it("rend le nombre de cours supprimés", async () => {
             dépôt(Lesson).execute.mockResolvedValue({ affected: 4 });
