@@ -316,6 +316,19 @@ describe("Importer", () => {
             expect(dépôt(Subject).save).toHaveBeenCalledWith({ id: 7, code: "S5A.02", label: "Projet tutoré" });
         });
 
+        it("remplace un intitulé fait du code répété", async () => {
+            dépôt(Subject).findOneBy.mockResolvedValue({ id: 8, code: "FERIE", label: "FERIE FERIE" });
+
+            await Importer.instance.importLessons(
+                caches,
+                source,
+                [parsed({ subjectCode: "FERIE", subjectLabel: "FERIE" })],
+                "A3",
+            );
+
+            expect(dépôt(Subject).save).toHaveBeenCalledWith({ id: 8, code: "FERIE", label: "FERIE" });
+        });
+
         it("retient l'intitulé lu après une case compacte dans le même passage", async () => {
             await Importer.instance.importLessons(
                 caches,

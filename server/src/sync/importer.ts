@@ -39,11 +39,12 @@ export function computeDedupKey(lesson: ParsedLesson): string {
 
 /**
  * Un intitulé mérite d'être écrit s'il nomme la matière : le code seul ne
- * remplace qu'un intitulé vide.
+ * remplace qu'un intitulé qui n'en était pas un — vide, ou fait du code répété
+ * (« FERIE FERIE », tel que l'enregistraient les anciennes lectures).
  */
 function improvesLabel(code: string, current: string, candidate: string): boolean {
     if (candidate.length === 0 || candidate === current) return false;
-    return candidate !== code || current.length === 0;
+    return candidate !== code || current.split(" ").every((word) => word === code);
 }
 
 /**
