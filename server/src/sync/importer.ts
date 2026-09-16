@@ -14,6 +14,7 @@ import { StudentGroup } from "../entities/studentGroup.entity.js";
 import { Subject } from "../entities/subject.entity.js";
 import { Teacher } from "../entities/teacher.entity.js";
 import { parseGroupCode } from "./groups.js";
+import { officialSubjectLabel } from "./subjects.reference.js";
 import type { ParsedLesson, SourceFile } from "./types.js";
 import type { Year } from "../entities/enums.js";
 
@@ -37,11 +38,21 @@ export function computeDedupKey(lesson: ParsedLesson): string {
 }
 
 /**
+ * Un intitulé mérite d'être écrit s'il nomme la matière : le code seul ne
+ * remplace qu'un intitulé qui n'en était pas un — vide, ou fait du code répété
+ * (« FERIE FERIE », tel que l'enregistraient les anciennes lectures).
+ */
+function improvesLabel(code: string, current: string, candidate: string): boolean {
+    if (candidate.length === 0 || candidate === current) return false;
+    return candidate !== code || current.split(" ").every((word) => word === code);
+}
+
+/**
  * Caches d'un passage de synchronisation : les mêmes matières, enseignants,
  * salles et groupes reviennent dans tous les fichiers.
  */
 export class ImportCaches {
-    readonly subjects = new Map<string, number>();
+    readonly subjects = new Map<string, { id: number; label: string }>();
     readonly teachers = new Map<string, number>();
     readonly rooms = new Map<string, Room>();
     readonly groups = new Map<string, number>();
@@ -142,13 +153,18 @@ export class Importer {
             .map((name) => caches.rooms.get(name))
             .filter((room): room is Room => room !== undefined);
 
+        // Avant le dédoublonnage : un cours déjà connu doit aussi pouvoir corriger
+        // l'intitulé de sa matière. Le programme national fait foi ; le texte de
+        // la case ne sert qu'aux codes qu'il ne connaît pas.
+        const label = officialSubjectLabel(parsed.subjectCode) ?? parsed.subjectLabel;
+        const subject = await this.upsertSubject(caches, parsed.subjectCode, label);
+
         const existing = await lessons.findOne({ where: { dedupKey }, relations: { rooms: true } });
         if (existing) {
             await this.attachMissingRooms(existing, rooms);
             return { id: existing.id, created: false };
         }
 
-        const subject = await this.upsertSubject(caches, parsed.subjectCode, parsed.subjectLabel);
         const teacher = parsed.teacherName ? await this.upsertTeacher(caches, parsed.teacherName) : null;
 
         const saved = await lessons.save(
@@ -185,15 +201,27 @@ export class Importer {
         await dataSource.getRepository(Lesson).save(lesson);
     }
 
+    /**
+     * Enregistre la matière, sans jamais remplacer un intitulé par le code seul.
+     *
+     * Une case compacte (`R1.01 - JP - 103`) ne connaît que le code ; l'intitulé
+     * vient des cases détaillées des cours de promotion. Réécrire à chaque
+     * passage faisait gagner la dernière case lue, souvent la compacte.
+     */
     private async upsertSubject(caches: ImportCaches, code: string, label: string): Promise<number> {
         const cached = caches.subjects.get(code);
-        if (cached !== undefined) return cached;
+        if (cached && !improvesLabel(code, cached.label, label)) return cached.id;
 
         const subjects = dataSource.getRepository(Subject);
-        const existing = await subjects.findOneBy({ code });
-        const saved = await subjects.save({ ...(existing ?? {}), code, label });
+        const existing = cached ? { id: cached.id, code, label: cached.label } : await subjects.findOneBy({ code });
 
-        caches.subjects.set(code, saved.id);
+        if (existing && !improvesLabel(code, existing.label, label)) {
+            caches.subjects.set(code, { id: existing.id, label: existing.label });
+            return existing.id;
+        }
+
+        const saved = await subjects.save({ ...(existing ?? {}), code, label });
+        caches.subjects.set(code, { id: saved.id, label: saved.label });
         return saved.id;
     }
 

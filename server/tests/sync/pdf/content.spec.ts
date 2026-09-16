@@ -120,6 +120,36 @@ describe("readCell — forme détaillée", () => {
         expect(lu.teacherName).toBe("JP");
     });
 
+    it("lit un cours de promotion sans enseignant sans amputer son intitulé", () => {
+        // Les deux dernières lignes étaient prises d'office pour l'enseignant et la salle.
+        const lu = readCell(["R1.01 R1.01 -", "Initiation au", "développement", "AC"]);
+
+        expect(lu.subjectLabel).toBe("Initiation au développement");
+        expect(lu.teacherName).toBeNull();
+        expect(lu.roomNames).toEqual(["AmphC"]);
+    });
+
+    it("reconnaît un enseignant au nom accentué", () => {
+        const lu = readCell(["R3.05 R3.05 -", "Programmation système", "Hügel T.", "R47"]);
+        expect(lu.teacherName).toBe("Hügel T.");
+        expect(lu.subjectLabel).toBe("Programmation système");
+    });
+
+    it("lit une case sans salle ni enseignant", () => {
+        const lu = readCell(["R1.01 R1.01 -", "Initiation au", "développement"]);
+        expect(lu.subjectLabel).toBe("Initiation au développement");
+        expect(lu.teacherName).toBeNull();
+        expect(lu.roomNames).toEqual([]);
+    });
+
+    it("ne double pas le code d'une mention administrative", () => {
+        const lu = readCell(["FERIE FERIE", "Indéterminé I.", "."]);
+        expect(lu.subjectCode).toBe("FERIE");
+        expect(lu.subjectLabel).toBe("FERIE");
+        expect(lu.teacherName).toBe("Indéterminé I.");
+        expect(lu.roomNames).toEqual([]);
+    });
+
     it("rend un enseignant nul quand un point en tient lieu", () => {
         expect(readCell(["R1.01 - Initiation", "TD", ".", "103"]).teacherName).toBeNull();
     });

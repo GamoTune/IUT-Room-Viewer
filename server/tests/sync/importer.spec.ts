@@ -281,6 +281,80 @@ describe("Importer", () => {
         });
     });
 
+    describe("intitulé des matières", () => {
+        // `S5A.02` n'existe pas dans le programme national : son intitulé vient
+        // des cases, et c'est là que l'ordre de lecture pouvait tout défaire.
+        const locale = { subjectCode: "S5A.02", subjectLabel: "Projet tutoré" };
+
+        it("préfère l'intitulé du programme national au texte de la case", async () => {
+            await Importer.instance.importLessons(
+                caches,
+                source,
+                [parsed({ subjectCode: "R5A.10", subjectLabel: "NoSQL" })],
+                "A3",
+            );
+
+            expect(dépôt(Subject).save).toHaveBeenCalledWith({
+                code: "R5A.10",
+                label: "Nouveaux paradigmes de base de données",
+            });
+        });
+
+        it("garde l'intitulé en base face à une case qui ne donne que le code", async () => {
+            dépôt(Subject).findOneBy.mockResolvedValue({ id: 7, code: "S5A.02", label: "Projet tutoré" });
+
+            await Importer.instance.importLessons(caches, source, [parsed({ subjectCode: "S5A.02", subjectLabel: "S5A.02" })], "A3");
+
+            expect(dépôt(Subject).save).not.toHaveBeenCalled();
+        });
+
+        it("remplace un intitulé qui n'était que le code", async () => {
+            dépôt(Subject).findOneBy.mockResolvedValue({ id: 7, code: "S5A.02", label: "S5A.02" });
+
+            await Importer.instance.importLessons(caches, source, [parsed(locale)], "A3");
+
+            expect(dépôt(Subject).save).toHaveBeenCalledWith({ id: 7, code: "S5A.02", label: "Projet tutoré" });
+        });
+
+        it("remplace un intitulé fait du code répété", async () => {
+            dépôt(Subject).findOneBy.mockResolvedValue({ id: 8, code: "FERIE", label: "FERIE FERIE" });
+
+            await Importer.instance.importLessons(
+                caches,
+                source,
+                [parsed({ subjectCode: "FERIE", subjectLabel: "FERIE" })],
+                "A3",
+            );
+
+            expect(dépôt(Subject).save).toHaveBeenCalledWith({ id: 8, code: "FERIE", label: "FERIE" });
+        });
+
+        it("retient l'intitulé lu après une case compacte dans le même passage", async () => {
+            await Importer.instance.importLessons(
+                caches,
+                source,
+                [
+                    parsed({ subjectCode: "S5A.02", subjectLabel: "S5A.02" }),
+                    parsed({ ...locale, start: new Date("2026-09-11T06:00:00.000Z") }),
+                ],
+                "A3",
+            );
+
+            const dernier = dépôt(Subject).save.mock.calls.at(-1)![0] as { label: string };
+            expect(dernier.label).toBe("Projet tutoré");
+            expect(dépôt(Subject).findOneBy).toHaveBeenCalledTimes(1);
+        });
+
+        it("répare l'intitulé même quand le cours est déjà enregistré", async () => {
+            dépôt(Lesson).findOne.mockResolvedValue({ id: 5, rooms: [] });
+            dépôt(Subject).findOneBy.mockResolvedValue({ id: 7, code: "R5A.14", label: "R5A.14" });
+
+            await Importer.instance.importLessons(caches, source, [parsed({ roomNames: [] })], "A3");
+
+            expect(dépôt(Subject).save).toHaveBeenCalledWith({ id: 7, code: "R5A.14", label: "Anglais" });
+        });
+    });
+
     describe("deleteOrphanLessons", () => {
         it("rend le nombre de cours supprimés", async () => {
             dépôt(Lesson).execute.mockResolvedValue({ affected: 4 });
