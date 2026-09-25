@@ -198,9 +198,11 @@ describe("Importer", () => {
         });
 
         it("refuse un code de groupe illisible", async () => {
-            expect(Importer.instance.importLessons(caches, source, [parsed({ groupCodes: ["???"] })], "A3")).rejects.toThrow(
-                "Code de groupe illisible",
-            );
+            // Sans `await`, l'assertion partait sans que personne ne l'attende : le
+            // test passait même si l'import ne rejetait pas.
+            await expect(
+                Importer.instance.importLessons(caches, source, [parsed({ groupCodes: ["???"] })], "A3"),
+            ).rejects.toThrow("Code de groupe illisible");
         });
     });
 

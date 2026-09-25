@@ -202,6 +202,37 @@ pipeline qui committe à votre place est un pipeline qu'on ne relit plus.
 Le job de tests a aussi été renommé « Serveur — Types et tests » : il n'a jamais linté, son nom le
 prétendait.
 
+### Effet de bord inattendu : le formatage a réveillé Sonar
+
+La PR de l'étape 2 a fait **échouer la Quality Gate** — alors qu'elle ne change aucun comportement.
+Explication : Sonar ne juge que le _nouveau_ code, et « nouveau » veut dire _lignes touchées_. Le
+passage de Prettier ayant touché 75 fichiers, des centaines de lignes anciennes sont redevenues
+neuves aux yeux de l'analyse, dette comprise. Le verdict : `new_reliability_rating` à **D**, à cause
+d'un bug jusque-là invisible.
+
+Le bug, dans `tests/sync/importer.spec.ts` :
+
+```ts
+// avant — l'assertion part sans que personne ne l'attende
+expect(Importer.instance.importLessons(...)).rejects.toThrow("Code de groupe illisible");
+```
+
+Une assertion asynchrone non attendue : le test passait **même si l'import ne rejetait rien**. Un
+test qui ne pouvait pas échouer, donc un test qui ne servait à rien. Corrigé par un `await`.
+
+Deux leçons pour le rapport :
+
+- Un reformatage massif **coûte une analyse Sonar complète** de tout ce qu'il touche. C'est
+  désagréable sur le moment, mais c'est exactement ce qu'on veut : la dette cachée remonte.
+- Encore un défaut trouvé **dans les tests**, pas dans le code de production. Deux outils différents
+  (ESLint, puis Sonar) ont chacun trouvé un test qui mentait. La suite de tests était verte dans les
+  deux cas — la couverture dit combien de lignes sont exécutées, jamais si les assertions tiennent.
+
+Sonar signale par ailleurs six _code smells_ mineurs sur ces mêmes lignes (`replace` au lieu de
+`replaceAll`, une complexité cognitive de 18 pour 15 autorisés dans `parseTimetable`). Non corrigés :
+ils ne bloquent pas la porte, et les traiter dans cette PR mélangerait deux intentions. Ils sont
+notés comme dette.
+
 ### Reste à éprouver
 
 - Le gain réel en revue : moins de remarques de style sur les prochaines PR ?
