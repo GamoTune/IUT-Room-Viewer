@@ -59,3 +59,45 @@ jobs:
           path: server/coverage/lcov.info
           if-no-files-found: ignore
           retention-days: 14
+
+  sonar:
+    name: Serveur - Analyse SonarQube Cloud
+    # Sans tests verts, la couverture est absente et la Quality Gate n'a pas de sens.
+    needs: server
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Historique complet : SonarQube s'en sert pour distinguer le nouveau code
+          # et attribuer chaque problème à son commit.
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Mettre en cache les paquets
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
+      # Les types des dépendances rendent l'analyse TypeScript plus précise.
+      - name: Installer les dépendances
+        run: bun install --frozen-lockfile
+
+      - name: Récupérer le rapport de couverture
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-server
+          path: server/coverage
+
+      # Configuration dans server/sonar-project.properties.
+      - name: Analyse SonarQube Cloud
+        uses: SonarSource/sonarqube-scan-action@v8
+        with:
+          projectBaseDir: server
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
