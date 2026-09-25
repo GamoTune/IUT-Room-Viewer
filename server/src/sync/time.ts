@@ -44,7 +44,7 @@ export function parisToUtc(date: Date, minutesFromMidnight: number): Date {
     );
 
     let offset = parisOffsetMinutes(new Date(naive));
-    let instant = naive - offset * 60000;
+    const instant = naive - offset * 60000;
     offset = parisOffsetMinutes(new Date(instant));
 
     return new Date(naive - offset * 60000);

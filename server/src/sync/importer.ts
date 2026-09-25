@@ -4,7 +4,6 @@
 // ============================================
 
 import { createHash } from "node:crypto";
-import { In, IsNull, Not } from "typeorm";
 import dataSource from "../utils/dataSource.js";
 import { EdtSource } from "../entities/edtSource.entity.js";
 import { Lesson } from "../entities/lesson.entity.js";

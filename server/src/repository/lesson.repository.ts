@@ -3,7 +3,7 @@
 // Accès aux cours, partagé par les services de lecture
 // ============================================
 
-import { In, LessThan, LessThanOrEqual, MoreThan, MoreThanOrEqual, type FindOptionsWhere } from "typeorm";
+import { In } from "typeorm";
 import dataSource from "../utils/dataSource.js";
 import { Lesson } from "../entities/lesson.entity.js";
 import { Room } from "../entities/room.entity.js";

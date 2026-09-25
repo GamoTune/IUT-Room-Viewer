@@ -37,7 +37,9 @@ export interface ParsedTimetable {
  * horaires, les traits donnent les limites des cases, et la position verticale
  * d'une case désigne le ou les groupes concernés.
  */
-export async function parseTimetable(data: Uint8Array, year: Year): Promise<ParsedTimetable> {
+// L'année n'est plus lue : la portée d'une case suffit à nommer les groupes. Le
+// paramètre reste pour ne pas casser les appels, préfixé pour le dire.
+export async function parseTimetable(data: Uint8Array, _year: Year): Promise<ParsedTimetable> {
     const page = await readPage(data);
     const scale = calibrateTime(page.items);
     const bands = buildBands(page, scale);

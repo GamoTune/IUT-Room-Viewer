@@ -3,7 +3,7 @@
 // Reconstitution de la grille d'un emploi du temps
 // ============================================
 
-import type { Line, PageGeometry, TextItem } from "./geometry.js";
+import type { PageGeometry, TextItem } from "./geometry.js";
 
 /** Jours affichés en tête de ligne, dans l'ordre. */
 export const DAY_LABELS = ["LUNDI", "MARDI", "MERCREDI", "JEUDI", "VENDREDI", "SAMEDI"] as const;

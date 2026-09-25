@@ -142,7 +142,7 @@ describe("parseIcs", () => {
             événement(
                 "DTSTART:20260910T080000",
                 "DTEND:20260910T100000",
-                "SUMMARY:ligne\\nsuite\\, fin\; et\\\\bar",
+                "SUMMARY:ligne\\nsuite\\, fin\\; et\\\\bar",
             ),
         );
         expect(events[0]!.summary).toBe("ligne suite, fin; et\\bar");
