@@ -20,12 +20,13 @@ COPY package.json bun.lock ./
 COPY server/package.json server/
 COPY bot/package.json bot/
 COPY web/package.json web/
-# Le front tire `@gamo/ds` de la forge : sans ce fichier, le paquet du scope
-# `@gamo` serait cherché sur npmjs et l'installation échouerait.
-COPY web/.npmrc web/
 
 # `--production` écarte les dépendances de développement : ni TypeScript, ni
 # ESLint, ni les types n'ont leur place dans une image qui ne fait que tourner.
+#
+# Le front dépend de `@gamo/ds`, hébergé sur une forge privée et déclaré dans un
+# `.npmrc` qui ne quitte pas le poste de développement : c'est `bun.lock`, avec
+# l'URL déjà résolue, qui rend l'installation reproductible ici.
 RUN bun install --frozen-lockfile --production
 
 # --- Exécution -------------------------------------------------------------
