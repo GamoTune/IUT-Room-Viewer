@@ -238,3 +238,93 @@ notés comme dette.
 - Le gain réel en revue : moins de remarques de style sur les prochaines PR ?
 - Brancher ESLint sur le type-checker (`typescript-eslint` en mode _type-aware_) : règles bien plus
   fines (promesses non attendues, comparaisons impossibles), au prix d'une analyse plus lente.
+
+---
+
+## 2026-09-25 — Étape 4 : conteneuriser le serveur et l'éprouver en CI
+
+### Pourquoi
+
+Jusque-là, le pipeline prouvait que le code **compile** et que les tests **passent**, sur un runner
+Ubuntu avec Bun installé par une action. Rien ne prouvait qu'il **démarre** ailleurs que sur le poste
+de développement. C'est exactement le « ça marche chez moi » que le cours prend comme exemple
+(pages 22 à 25) : environnements différents, dépendances différentes, exceptions aléatoires en
+production.
+
+L'image, elle, est un artefact vérifiable : même système, mêmes dépendances, même commande de
+démarrage qu'en production.
+
+### Ce qui a été mis en place
+
+- **`server/Dockerfile` multi-étapes.** Une étape `deps` qui n'installe que les dépendances, une
+  étape `runtime` qui n'emporte que le nécessaire. Tant que les manifestes ne changent pas, Docker
+  réutilise le calque d'installation : le code change cent fois par jour, pas les dépendances.
+- **Contexte de construction à la racine** du dépôt, pas dans `server/` : les dépendances d'un espace
+  de travail Bun se résolvent depuis `bun.lock`, qui vit à la racine.
+- **`--filter=server`** : n'installe que les dépendances de l'API. Sans lui, Vue, le design system et
+  discord.js entrent dans l'image du serveur — **186 Mo de dépendances contre 119**.
+- **Sans root** (`USER bun`, fourni par l'image de base) et **`HEALTHCHECK`** intégré : le conteneur
+  sait dire s'il va bien, l'orchestrateur n'a pas à le deviner.
+- **`compose.yaml`** : PostgreSQL + API. La base a son propre test de santé (`pg_isready`) et l'API
+  ne démarre qu'une fois la base **réellement prête**, pas seulement lancée.
+- **Job `container`** : construit l'image avec le cache GitHub, démarre la pile avec `--wait`,
+  applique les migrations, puis interroge `/health` et `/api/v1/rooms`.
+
+### Les quatre échecs, et ce qu'ils apprennent
+
+C'est la partie la plus instructive : **rien n'a marché du premier coup**, et aucun de ces défauts
+n'était visible en local.
+
+1. **`COPY web/.npmrc` — fichier introuvable.** Ce fichier déclare la forge privée pour le scope
+   `@gamo`… mais il n'est pas suivi par Git : il n'existe que sur mon poste. La CI ne l'a jamais eu.
+   Si l'installation marche quand même, c'est que `bun.lock` contient déjà l'URL résolue du paquet.
+   **Leçon** : la construction d'image révèle ce que le dépôt ne contient pas vraiment.
+2. **`Cannot find module 'dotenv/config'`.** Bun ne remonte pas toutes les dépendances à la racine :
+   celles d'un paquet d'espace de travail vivent dans son propre `node_modules`, en liens
+   symboliques vers le magasin central. L'image n'emportait que celui de la racine. Reproduit en
+   trente secondes hors Docker, en rejouant l'étape `deps` dans un dossier temporaire — plus rapide
+   que d'enchaîner les constructions.
+3. **`TypeError: undefined is not an object` dans `@PrimaryGeneratedColumn`.** Bun choisit le
+   `tsconfig.json` à partir du **répertoire de travail**. Lancé depuis `/app`, il ne trouvait pas
+   celui du serveur, compilait avec les décorateurs _standards_ (TC39) au lieu des décorateurs
+   historiques de TypeScript, et TypeORM s'effondrait sur la première entité. Corrigé par
+   `WORKDIR /app/server`. **Leçon** : le conteneur ne reproduit pas seulement l'OS, il reproduit
+   aussi le répertoire depuis lequel on lance — et ça compte.
+4. **`Module not found "/app/node_modules/typeorm/cli.js"`** : même histoire de résolution. Corrigé
+   en appelant `bun run db:migrate`, le script du dépôt, plutôt qu'un chemin en dur. **Leçon** : la
+   CI ne doit pas réinventer les commandes du projet, sinon elles divergent.
+
+### Mesures
+
+|                        |                                                                       |
+| ---------------------- | --------------------------------------------------------------------- |
+| Taille de l'image      | **236 Mo**                                                            |
+| Dépendances embarquées | 119 Mo (au lieu de 186 sans `--filter`)                               |
+| Durée du job complet   | **42 s**, construction avec cache comprise                            |
+| Migrations appliquées  | 2, sur une base PostgreSQL 18 vierge                                  |
+| Vérifications          | `/health` répond `status: ok`, `/api/v1/rooms` répond `success: true` |
+
+À comparer aux autres jobs du même pipeline : lint 14 s, types et tests 17 s, Sonar 60 s.
+
+### Comparatif des approches
+
+| Approche                                                     | Ce qu'elle prouve                                      | Coût                              |
+| ------------------------------------------------------------ | ------------------------------------------------------ | --------------------------------- |
+| Runner Ubuntu + action `setup-bun` (avant)                   | Le code compile et les tests passent                   | ~15 s                             |
+| Job exécuté **dans** un conteneur (`container:` du workflow) | Idem, mais dans l'image cible                          | ~15 s, sans artefact réutilisable |
+| **Image construite + pile démarrée** (retenu)                | Le serveur **démarre**, migre une vraie base et répond | 42 s                              |
+| Kubernetes / environnement de pré-production                 | Comportement sous charge, montée de version            | Hors sujet pour ce projet         |
+
+L'option intermédiaire, `container:` dans le workflow, est séduisante et pas chère — mais elle ne
+produit aucun artefact : on teste _dans_ une image sans jamais vérifier que **la nôtre** fonctionne.
+Ici, ce qui est éprouvé est exactement ce qui pourrait partir en production.
+
+### Reste à éprouver
+
+- **Scanner l'image** (Trivy, Grype) : c'est le prolongement naturel, et ça recouvre l'analyse de
+  vulnérabilité des dépendances du cours.
+- **Publier l'image** dans un registre (`ghcr.io`) sur tag, pour boucler la chaîne jusqu'au
+  déploiement.
+- **Réduire la taille** : `bun build --compile` produit un binaire autonome, mais `pdfjs-dist`
+  résout ses polices par `createRequire`, ce qui casse dans un binaire compilé. À mesurer plutôt
+  qu'à supposer.
