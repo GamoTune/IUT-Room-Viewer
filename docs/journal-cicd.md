@@ -82,9 +82,48 @@ est bloquée : c'est une barrière. Toute la différence entre mesurer et tenir 
 - **Le secret** : `SONAR_TOKEN` doit exister côté dépôt ; sans lui le job échoue tout de suite. Le
   contrôle est fait en début de job pour éviter de payer une analyse inutile.
 
-### À mesurer une fois en place
+### Résultats (PR #13)
 
-- Durée du job Sonar, comparée aux ~15 s du job de tests.
-- Ce que la Quality Gate remonte sur du code déjà écrit (dette, duplications, *code smells*).
-- Est-ce qu'une PR volontairement mauvaise est bien bloquée ? (test à faire : dupliquer une fonction,
-  laisser du code mort.)
+Deux échecs avant d'y arriver, puis analyse verte.
+
+1. **Organisation inexistante** — `ERROR Organization key 'Arthur Labregere' does not exist.` Le
+   fichier de configuration reprenait le nom du compte au lieu des clés SonarCloud. Les bonnes
+   valeurs se lisent dans l'API publique :
+   `https://sonarcloud.io/api/components/search?organization=gamotune&qualifiers=TRK` →
+   organisation `gamotune`, projet `GamoTune_IUT-Room-Viewer`. Leçon : la clé de projet Sonar n'a
+   rien à voir avec le nom du dépôt Git, et le message d'erreur ne dit pas où trouver la bonne.
+2. Une fois corrigé : **Quality Gate OK**, job en **58 s** contre **14 s** pour le job de tests.
+   L'analyse coûte donc environ quatre fois le prix des tests — acceptable ici, à surveiller sur un
+   projet plus gros.
+
+**Ce que l'analyse voit du code existant** (`main`, mesuré par l'ancienne analyse automatique) :
+
+| Mesure | Valeur |
+|---|---|
+| Lignes de code | 9 063 |
+| *Code smells* | 95 |
+| Dette technique | 754 min (~12 h 30) |
+| Duplication | 0,5 % |
+| Couverture | *absente* |
+
+**Ce que l'analyse du pipeline ajoute**, sur la PR : couverture **91,2 %**, 0 bug, 0 vulnérabilité,
+0 *code smell* sur le nouveau code, dette nulle.
+
+Trois enseignements pour le rapport :
+
+- **L'analyse automatique ne voit jamais la couverture.** Elle n'exécute pas les tests et ne reçoit
+  aucun rapport LCOV : la ligne « Coverage » restait vide sur `main`. Passer par le pipeline est la
+  seule façon d'avoir la couverture *dans* Sonar. À elle seule, cette différence justifie l'étape.
+- **Les 91,2 % de Sonar ne sont pas les 94,04 % mesurés en local.** Même rapport LCOV, mais Sonar
+  compte les lignes exécutables à sa façon et applique ses propres exclusions. Deux outils qui
+  « mesurent la couverture » ne donnent pas le même chiffre : ce qui compte est de comparer un outil
+  à lui-même dans le temps.
+- **La Quality Gate par défaut ne juge que le nouveau code** : les quatre conditions portent toutes
+  sur `new_*`. Les 95 *code smells* existants ne bloquent donc rien — c'est volontaire (*clean as you
+  code*), mais il faut le savoir : une PR peut passer au vert dans un projet en mauvais état.
+
+### Reste à éprouver
+
+- Ouvrir une PR volontairement mauvaise (fonction dupliquée, code mort, `any`) pour vérifier que la
+  porte passe bien au rouge et **bloque** la fusion.
+- Regarder ce que valent les 95 *code smells* existants : dette réelle ou bruit ?
