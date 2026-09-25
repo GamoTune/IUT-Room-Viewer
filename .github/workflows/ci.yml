@@ -121,10 +121,9 @@ jobs:
       - name: Démarrer la pile
         run: docker compose up -d --wait
 
+      # Le script du dépôt, tel quel : la CI n'invente pas sa propre commande.
       - name: Appliquer les migrations
-        run: |
-          docker compose exec -T api \
-            bun /app/node_modules/typeorm/cli.js migration:run -d src/utils/dataSource.ts
+        run: docker compose exec -T api bun run db:migrate
 
       - name: Test de fumée
         run: |
