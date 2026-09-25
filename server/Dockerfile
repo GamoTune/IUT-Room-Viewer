@@ -1,0 +1,52 @@
+# syntax=docker/dockerfile:1
+# ============================================
+# 📁 server/Dockerfile
+# Image de l'API — construite depuis la racine du dépôt
+#
+#   docker build -f server/Dockerfile -t iut-room-viewer-server .
+#
+# Le contexte est la racine parce que les dépendances d'un espace de travail Bun
+# se résolvent depuis `bun.lock`, qui vit à la racine : construire depuis
+# `server/` donnerait un arbre de dépendances différent de celui du dépôt.
+# ============================================
+
+# --- Dépendances -----------------------------------------------------------
+# Étape séparée : tant que les manifestes ne bougent pas, Docker réutilise ce
+# calque et l'installation n'est pas rejouée à chaque changement de code.
+FROM oven/bun:1.3.14-alpine AS deps
+WORKDIR /app
+
+COPY package.json bun.lock ./
+COPY server/package.json server/
+COPY bot/package.json bot/
+COPY web/package.json web/
+# Le front tire `@gamo/ds` de la forge : sans ce fichier, le paquet du scope
+# `@gamo` serait cherché sur npmjs et l'installation échouerait.
+COPY web/.npmrc web/
+
+# `--production` écarte les dépendances de développement : ni TypeScript, ni
+# ESLint, ni les types n'ont leur place dans une image qui ne fait que tourner.
+RUN bun install --frozen-lockfile --production
+
+# --- Exécution -------------------------------------------------------------
+FROM oven/bun:1.3.14-alpine AS runtime
+WORKDIR /app
+
+ENV NODE_ENV=production \
+    HOST=0.0.0.0 \
+    PORT=3000
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json bun.lock ./
+COPY server ./server
+
+# L'image de base fournit l'utilisateur `bun` : le serveur ne tourne pas en root.
+USER bun
+
+EXPOSE 3000
+
+# Le conteneur sait dire s'il va bien : l'orchestrateur n'a pas à le deviner.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
+    CMD bun --eval "fetch('http://127.0.0.1:' + (process.env.PORT ?? 3000) + '/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+
+CMD ["bun", "server/src/index.ts"]

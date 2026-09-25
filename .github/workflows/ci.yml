@@ -89,6 +89,56 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  # L'image sert de preuve : le serveur démarre ailleurs que sur le poste de
+  # développement, avec une vraie base, et répond.
+  container:
+    name: Conteneur - Image et test de fumée
+    needs: server
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Le cache est porté par GitHub : sans lui, chaque exécution réinstalle
+      # toutes les dépendances dans l'image.
+      - name: Construire l'image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: server/Dockerfile
+          load: true
+          tags: iut-room-viewer-server:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Taille de l'image
+        run: docker image inspect iut-room-viewer-server:ci --format '{{.Size}}' | numfmt --to=iec
+
+      # `--wait` s'appuie sur le HEALTHCHECK de l'image et sur celui de PostgreSQL :
+      # la commande ne rend la main que si la pile est réellement en bon état.
+      - name: Démarrer la pile
+        run: docker compose up -d --wait
+
+      - name: Appliquer les migrations
+        run: |
+          docker compose exec -T api sh -c \
+            'cd /app/server && bun /app/node_modules/typeorm/cli.js migration:run -d src/utils/dataSource.ts'
+
+      - name: Test de fumée
+        run: |
+          curl --fail --silent --show-error http://127.0.0.1:3000/health | tee /dev/stderr | grep -q '"status":"ok"'
+          curl --fail --silent --show-error http://127.0.0.1:3000/api/v1/rooms | tee /dev/stderr | grep -q '"success":true'
+
+      - name: Journaux de la pile
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Arrêter la pile
+        if: always()
+        run: docker compose down --volumes
+
   sonar:
     name: Serveur - Analyse SonarQube Cloud
     # Sans tests verts, la couverture est absente et la Quality Gate n'a pas de sens.
