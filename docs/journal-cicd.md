@@ -392,9 +392,33 @@ Pour ce projet, GitHub Actions s'impose puisque le code y est déjà. Mais l'exp
 apprend quelque chose que GitHub cache : **un runner, ça se maintient**. Mises à jour, espace disque,
 images de base qui dérivent. Le confort du runner géré a un prix, simplement il n'est pas visible.
 
+### Premier déploiement réel
+
+Tag `web-v0.2.0` poussé sur `main`, workflow déclenché, **26 secondes** du tag au site en ligne :
+
+- construction du front, racine d'API trouvée dans le bundle ;
+- miroir SFTP : deux fichiers envoyés, les deux anciens supprimés (`index-CDfzaNbM.js` et son CSS) ;
+- contrôle final : `iut.gamo.one` sert bien `index-Cer9cJlS.js`, et ce bundle pointe vers
+  `iut-room-viewer.gamo.one`, qui répond.
+
+À comparer au déploiement manuel : `bun run deploy` prenait environ le même temps, mais depuis mon
+poste, avec mes identifiants, sans trace. Le gain n'est pas la vitesse — c'est que **n'importe qui
+peut déployer**, que le quoi et le quand sont écrits quelque part, et qu'un bundle sans racine d'API
+ne peut plus partir.
+
+### Un piège de méthode : les PR empilées
+
+Trois fois de suite, des PR fusionnées n'ont pas atteint `main`. Chacune visait la branche du dessous
+(`#15` → `ci/conteneurs`, `#17` → `ci/lint-format`), et la branche du bas était déjà partie sur
+`main` : le travail restait bloqué au milieu de la pile. Rien ne le signale, la PR est verte et
+marquée fusionnée.
+
+Empiler des branches permet de continuer sans attendre la revue de la précédente — mais il faut
+**remonter la pile de bas en haut** et vérifier `git log origin/main..origin/<branche>` après chaque
+fusion. C'est la contrepartie de la méthode, et elle ne se voit pas dans l'interface.
+
 ### Reste à éprouver
 
-- Faire tourner le workflow pour de vrai : il attend cinq secrets et variables côté dépôt.
 - Étendre au serveur : aujourd'hui il tourne sous PM2, mis à jour à la main. L'image construite à
   l'étape 4 est le chaînon manquant — reste à la publier dans un registre et à la faire tirer par le
   serveur.
