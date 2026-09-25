@@ -3,7 +3,7 @@
 // Accès aux cours, partagé par les services de lecture
 // ============================================
 
-import { In, LessThan, LessThanOrEqual, MoreThan, MoreThanOrEqual, type FindOptionsWhere } from "typeorm";
+import { In } from "typeorm";
 import dataSource from "../utils/dataSource.js";
 import { Lesson } from "../entities/lesson.entity.js";
 import { Room } from "../entities/room.entity.js";
@@ -111,10 +111,7 @@ export class LessonRepository {
      * commence pile à cet instant occupe déjà la salle, d'où le `<=`. Sur une
      * vraie fenêtre, un cours démarrant à `to` reste exclu.
      */
-    private applyWindow(
-        query: ReturnType<typeof dataSource.createQueryBuilder>,
-        filter: LessonFilter,
-    ): void {
+    private applyWindow(query: ReturnType<typeof dataSource.createQueryBuilder>, filter: LessonFilter): void {
         if (filter.mode === "start") {
             query.where("lesson.start_utc >= :from AND lesson.start_utc < :to", {
                 from: filter.from,

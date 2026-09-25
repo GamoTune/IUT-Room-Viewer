@@ -39,7 +39,10 @@ const FLOOR_LABELS: Record<number, string> = {
     2: "2ème étage",
 };
 
-export function useRooms(consulted: ComputedRef<RoomWindow>, group: ComputedRef<Group | null>): {
+export function useRooms(
+    consulted: ComputedRef<RoomWindow>,
+    group: ComputedRef<Group | null>,
+): {
     floors: ComputedRef<FloorGroup[]>;
     freshness: ComputedRef<Freshness>;
     updatedAt: ComputedRef<number | null>;

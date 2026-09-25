@@ -3,7 +3,7 @@
 // Reconstitution de la grille d'un emploi du temps
 // ============================================
 
-import type { Line, PageGeometry, TextItem } from "./geometry.js";
+import type { PageGeometry, TextItem } from "./geometry.js";
 
 /** Jours affichés en tête de ligne, dans l'ordre. */
 export const DAY_LABELS = ["LUNDI", "MARDI", "MERCREDI", "JEUDI", "VENDREDI", "SAMEDI"] as const;
@@ -103,19 +103,14 @@ export function calibrateTime(items: TextItem[]): TimeScale {
     const meanX = header.reduce((sum, label) => sum + label.center, 0) / count;
     const meanMinutes = header.reduce((sum, label) => sum + label.minutes, 0) / count;
 
-    const covariance = header.reduce(
-        (sum, label) => sum + (label.center - meanX) * (label.minutes - meanMinutes),
-        0,
-    );
+    const covariance = header.reduce((sum, label) => sum + (label.center - meanX) * (label.minutes - meanMinutes), 0);
     const variance = header.reduce((sum, label) => sum + (label.center - meanX) ** 2, 0);
 
     // minutes = slope * x + intercept
     const slope = covariance / variance;
     const intercept = meanMinutes - slope * meanX;
 
-    const maxErrorMinutes = Math.max(
-        ...header.map((label) => Math.abs(slope * label.center + intercept - label.minutes)),
-    );
+    const maxErrorMinutes = Math.max(...header.map((label) => Math.abs(slope * label.center + intercept - label.minutes)));
 
     return {
         origin: -intercept / slope,
@@ -127,7 +122,7 @@ export function calibrateTime(items: TextItem[]): TimeScale {
 
 function toMinutes(label: string): number {
     const [hours, minutes] = label.split(":").map(Number);
-    return (hours! * 60 + minutes!) - 8 * 60;
+    return hours! * 60 + minutes! - 8 * 60;
 }
 
 /**
@@ -167,9 +162,9 @@ export function buildBands(page: PageGeometry, scale: TimeScale): Band[] {
     // internes aux cases sont bien plus courts. Un critère relatif évite de
     // dépendre des marges exactes du document.
     const gridWidth = 24 * scale.slotWidth;
-    const rows = cluster(
-        page.horizontals.filter((line) => line.x2 - line.x1 > gridWidth * 0.6).map((line) => line.y1),
-    ).sort((a, b) => a - b);
+    const rows = cluster(page.horizontals.filter((line) => line.x2 - line.x1 > gridWidth * 0.6).map((line) => line.y1)).sort(
+        (a, b) => a - b,
+    );
 
     const groups = page.items
         .filter((item) => /^G\d[ab]?$/i.test(item.text.trim()))
@@ -222,8 +217,5 @@ function normalizeHeights<T extends { top: number; bottom: number }>(bands: T[])
     const heights = bands.map((band) => band.bottom - band.top).sort((a, b) => a - b);
     const median = heights[Math.floor(heights.length / 2)]!;
 
-    return bands.map((band) =>
-        band.bottom - band.top > median * 1.1 ? { ...band, top: band.bottom - median } : band,
-    );
+    return bands.map((band) => (band.bottom - band.top > median * 1.1 ? { ...band, top: band.bottom - median } : band));
 }
-

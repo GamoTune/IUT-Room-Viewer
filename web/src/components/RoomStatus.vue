@@ -17,19 +17,16 @@ const MAX_SHOWN = 3;
 const shown = computed(() => state.lessons.slice(0, MAX_SHOWN));
 const hidden = computed(() => Math.max(0, state.lessons.length - MAX_SHOWN));
 
-const time = (value: string): string =>
-    new Date(value).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+const time = (value: string): string => new Date(value).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 
 /** `OTHER` couvre ce que l'IUT ne qualifie pas : mieux vaut ne rien afficher. */
-const typeOf = (lesson: Lesson): string | null =>
-    lesson.type && lesson.type !== "OTHER" ? lesson.type : null;
+const typeOf = (lesson: Lesson): string | null => (lesson.type && lesson.type !== "OTHER" ? lesson.type : null);
 
 /**
  * Certains cours n'ont pas d'intitulé distinct de leur code : le répéter
  * n'apporterait rien.
  */
-const titleOf = (lesson: Lesson): string | null =>
-    lesson.contentName === lesson.contentCode ? null : lesson.contentName;
+const titleOf = (lesson: Lesson): string | null => (lesson.contentName === lesson.contentCode ? null : lesson.contentName);
 
 const metaOf = (lesson: Lesson): string => {
     const when = live ? `jusqu'à ${time(lesson.endTime)}` : `${time(lesson.startTime)} – ${time(lesson.endTime)}`;

@@ -4,7 +4,6 @@
 // ============================================
 
 import { createHash } from "node:crypto";
-import { In, IsNull, Not } from "typeorm";
 import dataSource from "../utils/dataSource.js";
 import { EdtSource } from "../entities/edtSource.entity.js";
 import { Lesson } from "../entities/lesson.entity.js";
@@ -110,12 +109,7 @@ export class Importer {
     /**
      * Enregistre les cours d'un fichier et les rattache à leurs groupes.
      */
-    async importLessons(
-        caches: ImportCaches,
-        source: EdtSource,
-        lessons: ParsedLesson[],
-        year: Year,
-    ): Promise<ImportOutcome> {
+    async importLessons(caches: ImportCaches, source: EdtSource, lessons: ParsedLesson[], year: Year): Promise<ImportOutcome> {
         // Le fichier a pu être republié avec des cours en moins : on repart de
         // ses seuls rattachements, sans toucher à ceux des autres fichiers.
         await dataSource.getRepository(LessonGroup).delete({ sourceId: source.id });
@@ -142,16 +136,11 @@ export class Importer {
     /**
      * Crée le cours s'il n'existe pas déjà sous la même empreinte.
      */
-    private async upsertLesson(
-        caches: ImportCaches,
-        parsed: ParsedLesson,
-    ): Promise<{ id: number; created: boolean }> {
+    private async upsertLesson(caches: ImportCaches, parsed: ParsedLesson): Promise<{ id: number; created: boolean }> {
         const lessons = dataSource.getRepository(Lesson);
         const dedupKey = computeDedupKey(parsed);
 
-        const rooms = parsed.roomNames
-            .map((name) => caches.rooms.get(name))
-            .filter((room): room is Room => room !== undefined);
+        const rooms = parsed.roomNames.map((name) => caches.rooms.get(name)).filter((room): room is Room => room !== undefined);
 
         // Avant le dédoublonnage : un cours déjà connu doit aussi pouvoir corriger
         // l'intitulé de sa matière. Le programme national fait foi ; le texte de

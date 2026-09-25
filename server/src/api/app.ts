@@ -14,11 +14,8 @@ import { syncRoutes } from "./v1/index.js";
 import { scheduleRoutes } from "./v1/index.js";
 import { statsRoutes } from "./v1/index.js";
 
-
 // Import des routes v2
 import { courseRoutes } from "./v2/routes/courses.route.js";
-
-
 
 // Importer les documentations Swagger v1 et v2
 import { swaggerDocument as swaggerDocumentV1 } from "./v1/swagger.js";
@@ -49,9 +46,7 @@ app.use((_req, res, next) => {
 // Routes
 // ============================================
 
-
 // =========== Routes Générales ===============
-
 
 // Route de santé (pour vérifier que le serveur fonctionne)
 app.get("/health", (_req, res) => {
@@ -59,21 +54,29 @@ app.get("/health", (_req, res) => {
         status: "ok",
         version: process.env.VERSION,
         uptime: process.uptime(),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
     });
 });
 
 // Documentation Swagger v1
-app.use("/docs/v1", swaggerUi.serveFiles(swaggerDocumentV1), swaggerUi.setup(swaggerDocumentV1, {
-    customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: "IUT Room Viewer API v1 - Documentation",
-}));
+app.use(
+    "/docs/v1",
+    swaggerUi.serveFiles(swaggerDocumentV1),
+    swaggerUi.setup(swaggerDocumentV1, {
+        customCss: ".swagger-ui .topbar { display: none }",
+        customSiteTitle: "IUT Room Viewer API v1 - Documentation",
+    }),
+);
 
 // Documentation Swagger v2
-app.use("/docs/v2", swaggerUi.serveFiles(swaggerDocumentV2), swaggerUi.setup(swaggerDocumentV2, {
-    customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: "IUT Room Viewer API v2 - Documentation",
-}));
+app.use(
+    "/docs/v2",
+    swaggerUi.serveFiles(swaggerDocumentV2),
+    swaggerUi.setup(swaggerDocumentV2, {
+        customCss: ".swagger-ui .topbar { display: none }",
+        customSiteTitle: "IUT Room Viewer API v2 - Documentation",
+    }),
+);
 
 // Redirection /docs vers la dernière version (v2)
 app.get("/docs", (_req, res) => {
@@ -108,7 +111,6 @@ app.get("/", (_req, res) => {
     });
 });
 
-
 // ============= Routes v1 ====================
 
 app.use("/api/v1/rooms", roomRoutes);
@@ -118,11 +120,9 @@ app.use("/api/v1/sync", syncRoutes);
 app.use("/api/v1/schedule", scheduleRoutes);
 app.use("/api/v1/stats", statsRoutes);
 
-
 // ============= Routes v2 ====================
 
 app.use("/api/v2/courses", courseRoutes);
-
 
 // ============================================
 // Gestion des erreurs

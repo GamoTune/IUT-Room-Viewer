@@ -19,8 +19,8 @@ const RAPPORT = "coverage/lcov.info";
  * LCOV : les mêmes exclusions sont donc rejouées ici, depuis la configuration
  * plutôt que recopiées.
  */
-const exclusions: string[] = (config as { test?: { coveragePathIgnorePatterns?: string[] } }).test
-    ?.coveragePathIgnorePatterns ?? [];
+const exclusions: string[] =
+    (config as { test?: { coveragePathIgnorePatterns?: string[] } }).test?.coveragePathIgnorePatterns ?? [];
 
 const motifs = exclusions.map((motif) => new Bun.Glob(motif));
 const exclu = (chemin: string) => motifs.some((motif) => motif.match(chemin) || motif.match(`/${chemin}`));
@@ -62,9 +62,7 @@ for (const ligne of (await fichier.text()).split("\n")) {
 const pourcentage = trouvées === 0 ? 0 : (atteintes / trouvées) * 100;
 const verdict = pourcentage >= SEUIL_LIGNES ? "✅" : "❌";
 
-console.log(
-    `\n${verdict} Lignes couvertes : ${atteintes}/${trouvées} — ${pourcentage.toFixed(2)} % (seuil ${SEUIL_LIGNES} %)`,
-);
+console.log(`\n${verdict} Lignes couvertes : ${atteintes}/${trouvées} — ${pourcentage.toFixed(2)} % (seuil ${SEUIL_LIGNES} %)`);
 
 // Bun ne mesure pas les branches : son LCOV ne porte aucun enregistrement BRDA.
 console.log("ℹ️  Les branches ne sont pas mesurées : `bun test` ne les instrumente pas.");

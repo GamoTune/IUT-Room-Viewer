@@ -136,9 +136,7 @@ function columnOf(day: number): number {
     return (position === -1 ? 0 : position) + 2;
 }
 
-const visible = computed(() =>
-    placed.value.filter((entry) => singleDay === null || entry.day === singleDay),
-);
+const visible = computed(() => placed.value.filter((entry) => singleDay === null || entry.day === singleDay));
 
 const dayFormatter = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short" });
 
@@ -226,7 +224,7 @@ const nowMarker = computed(() => {
             :key="`slot-${slot}`"
             class="grid__slot"
             :class="{
-                'grid__slot--hour': (slot - 1) % SLOT_COUNT % 2 === 0,
+                'grid__slot--hour': ((slot - 1) % SLOT_COUNT) % 2 === 0,
                 'grid__slot--today': Math.floor((slot - 1) / SLOT_COUNT) === todayPosition,
             }"
             :style="{

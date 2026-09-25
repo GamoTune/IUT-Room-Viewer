@@ -78,10 +78,7 @@ describe("RoomService", () => {
 
         it("empile plusieurs cours dans une même salle", async () => {
             findAllRooms.mockResolvedValue([{ id: 1, name: "R52" }] as never);
-            findMany.mockResolvedValue([
-                lesson({ id: 1, rooms: ["R52"] }),
-                lesson({ id: 2, rooms: ["R52"] }),
-            ]);
+            findMany.mockResolvedValue([lesson({ id: 1, rooms: ["R52"] }), lesson({ id: 2, rooms: ["R52"] })]);
 
             const salles = await RoomService.instance.getRoomsAvailability(debut, fin);
             expect(salles[0]!.lessons.map((l) => l.id)).toEqual([1, 2]);

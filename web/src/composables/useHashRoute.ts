@@ -11,7 +11,10 @@ import { onMounted, onUnmounted, ref, type Ref } from "vue";
  * Un fragment suffit ici : deux écrans, un site entièrement client, et une URL
  * qui reste partageable — sans ajouter de routeur.
  */
-export function useHashRoute<T extends string>(routes: readonly T[], fallback: T): {
+export function useHashRoute<T extends string>(
+    routes: readonly T[],
+    fallback: T,
+): {
     current: Ref<T>;
     go: (route: T) => void;
 } {

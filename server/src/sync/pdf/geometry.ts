@@ -244,17 +244,10 @@ function addRectangle(
 }
 
 /** Forme compacte : `[peinture, [sous-chemins], boîte]`. */
-function readCompactForm(
-    args: PathArgs,
-    full: Matrix,
-    verticals: Line[],
-    horizontals: Line[],
-    rects: FilledRect[],
-): void {
+function readCompactForm(args: PathArgs, full: Matrix, verticals: Line[], horizontals: Line[], rects: FilledRect[]): void {
     const paintOperation = args[0] as number;
     const subPaths = (args[1] ?? []) as ArrayLike<ArrayLike<number>>;
-    const painted =
-        paintOperation === OPS.fill || paintOperation === OPS.fillStroke || paintOperation === OPS.eoFill;
+    const painted = paintOperation === OPS.fill || paintOperation === OPS.fillStroke || paintOperation === OPS.eoFill;
 
     for (let p = 0; p < subPaths.length; p++) {
         const data = subPaths[p];
@@ -284,12 +277,7 @@ function readCompactForm(
 }
 
 /** Classe un segment selon son orientation ; les obliques sont ignorées. */
-function addSegment(
-    from: [number, number],
-    to: [number, number],
-    verticals: Line[],
-    horizontals: Line[],
-): void {
+function addSegment(from: [number, number], to: [number, number], verticals: Line[], horizontals: Line[]): void {
     const dx = Math.abs(from[0] - to[0]);
     const dy = Math.abs(from[1] - to[1]);
 

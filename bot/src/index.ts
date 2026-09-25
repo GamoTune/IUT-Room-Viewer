@@ -7,12 +7,7 @@ import "dotenv/config";
 import { Client, Collection, GatewayIntentBits, REST, Routes } from "discord.js";
 
 // Import commands
-import {
-    helpCommand,
-    sallesMaintenantCommand,
-    sallesEntreCommand,
-    edtProfCommand,
-} from "./commands/index.js";
+import { helpCommand, sallesMaintenantCommand, sallesEntreCommand, edtProfCommand } from "./commands/index.js";
 
 // Import events
 import { readyEvent, interactionCreateEvent } from "./events/index.js";
@@ -31,12 +26,7 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 client.commands = new Collection();
 
 // Register commands
-const commands: BotCommand[] = [
-    helpCommand,
-    sallesMaintenantCommand,
-    sallesEntreCommand,
-    edtProfCommand,
-];
+const commands: BotCommand[] = [helpCommand, sallesMaintenantCommand, sallesEntreCommand, edtProfCommand];
 
 for (const command of commands) {
     client.commands.set(command.data.name, command);

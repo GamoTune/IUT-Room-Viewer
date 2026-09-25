@@ -6,7 +6,6 @@
 import { Router } from "express";
 import { CourseController } from "../../../controllers/course.controller.js";
 
-
 // Créer un routeur Express
 const router = Router();
 

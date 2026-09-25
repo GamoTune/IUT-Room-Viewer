@@ -1,0 +1,46 @@
+# ============================================
+# 📁 compose.yaml
+# Pile complète en local : PostgreSQL + API, au plus près de la production
+#
+#   docker compose up --build       démarre la pile
+#   docker compose run --rm api bun run --cwd server db:migrate
+#
+# Les identifiants sont ceux d'une base jetable : cette pile n'est pas destinée
+# à être exposée. La production a ses propres secrets, hors du dépôt.
+# ============================================
+
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: room
+      POSTGRES_PASSWORD: room
+      POSTGRES_DB: room_viewer
+    # L'API attend que la base réponde vraiment, pas seulement que le
+    # conteneur soit lancé : sans ça, le premier démarrage échoue une fois sur deux.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U room -d room_viewer"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+    ports:
+      - "5433:5432"
+
+  api:
+    # Nom fixe : la CI construit l'image une fois, puis la pile la réutilise
+    # au lieu de la reconstruire.
+    image: iut-room-viewer-server:ci
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    environment:
+      DATABASE_URL: postgres://room:room@db:5432/room_viewer
+      EDT_BASE_URL: https://edt-iut-info.unilim.fr/edt/
+      EDT_BACKUP_DIR: /app/server/data/backup
+      PORT: "3000"
+      VERSION: compose
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"

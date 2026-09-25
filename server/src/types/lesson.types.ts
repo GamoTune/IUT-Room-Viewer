@@ -35,7 +35,7 @@ export interface LessonResponse {
     type: string;
     startTime: string;
     endTime: string;
-    rooms: string[];  // Tableau de noms de salles (many-to-many)
+    rooms: string[]; // Tableau de noms de salles (many-to-many)
     teacher: string | null;
     contentCode: string;
     contentName: string;

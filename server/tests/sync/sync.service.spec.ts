@@ -76,7 +76,6 @@ const téléchargé = {
     backupPath: "/tmp/x.pdf",
 };
 
-
 describe("SyncService", () => {
     let service: InstanceType<typeof SyncService>;
 
@@ -112,11 +111,7 @@ describe("SyncService", () => {
 
     describe("syncAll", () => {
         it("n'importe que les PDF d'année", async () => {
-            discoverFiles.mockResolvedValue([
-                fichier("A3"),
-                fichier("G8a"),
-                fichier("A3", "A3", "ics"),
-            ]);
+            discoverFiles.mockResolvedValue([fichier("A3"), fichier("G8a"), fichier("A3", "A3", "ics")]);
 
             const bilan = await service.syncAll();
 
@@ -179,9 +174,7 @@ describe("SyncService", () => {
         });
 
         it("refuse une seconde synchronisation simultanée", async () => {
-            discoverFiles.mockImplementation(
-                () => new Promise((resolve) => setTimeout(() => resolve([]), 20)),
-            );
+            discoverFiles.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve([]), 20)));
 
             const première = service.syncAll();
             expect(service.syncAll()).rejects.toThrow("déjà en cours");
@@ -229,7 +222,9 @@ describe("SyncService", () => {
 
         it("rapporte l'échec du téléchargement", async () => {
             discoverFiles.mockResolvedValue([fichier("A3")]);
-            spyOn(globalThis, "fetch").mockImplementation((async () => new Response("", { status: 404 })) as unknown as typeof fetch);
+            spyOn(globalThis, "fetch").mockImplementation(
+                (async () => new Response("", { status: 404 })) as unknown as typeof fetch,
+            );
 
             const bilan = await service.syncAll({ dryRun: true });
 
@@ -269,7 +264,9 @@ describe("SyncService", () => {
 
         it("poursuit malgré l'échec d'un archivage", async () => {
             discoverFiles.mockResolvedValue([fichier("G8a"), fichier("G8b")]);
-            fetchDocument.mockImplementationOnce(async () => { throw new Error("réseau"); });
+            fetchDocument.mockImplementationOnce(async () => {
+                throw new Error("réseau");
+            });
 
             const bilan = await service.syncAll({ archiveOthers: true });
 

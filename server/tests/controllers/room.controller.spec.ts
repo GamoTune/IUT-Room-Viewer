@@ -76,10 +76,7 @@ describe("RoomController", () => {
 
         it("refuse une requête sans borne de fin", async () => {
             const { res, code } = fakeResponse();
-            await RoomController.instance.getRoomAvailability(
-                fakeRequest({ query: { startTime: query.startTime } }),
-                res,
-            );
+            await RoomController.instance.getRoomAvailability(fakeRequest({ query: { startTime: query.startTime } }), res);
 
             expect(code()).toBe(400);
         });

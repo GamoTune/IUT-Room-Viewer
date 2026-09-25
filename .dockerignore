@@ -1,0 +1,10 @@
+.git
+node_modules
+**/node_modules
+web/dist
+server/coverage
+server/data
+**/.env
+**/.env.*
+!**/.env.example
+docs

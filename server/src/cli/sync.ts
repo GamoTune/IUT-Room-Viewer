@@ -30,8 +30,7 @@ async function main(): Promise<void> {
         console.log("\n──────── Détail par document ────────");
         for (const file of summary.files) {
             console.log(
-                `${file.file.scope} S${file.file.weekNumber}`.padEnd(12) +
-                    `${String(file.lessonsParsed).padStart(3)} cours`,
+                `${file.file.scope} S${file.file.weekNumber}`.padEnd(12) + `${String(file.lessonsParsed).padStart(3)} cours`,
             );
         }
     }

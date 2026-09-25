@@ -13,7 +13,6 @@ const router = Router();
 // Définition des routes
 // ============================================
 
-
 // POST /api/v1/sync/trigger - Déclenche une synchronisation manuelle
 router.post("/trigger", requireApiKey, (req, res) => SyncController.instance.triggerSync(req, res));
 

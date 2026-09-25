@@ -13,7 +13,7 @@ import type { ApiResponse, Room, RoomWithLessonsResponse } from "../types/index.
 
 /**
  * Contrôleur pour les opérations sur les salles
- * 
+ *
  * Un contrôleur contient les handlers Express.
  * Il gère la requête HTTP et délègue la logique au service.
  */
@@ -71,7 +71,7 @@ export class RoomController {
                 data: availability,
             };
             res.json(response);
-        } catch (error) {
+        } catch {
             res.status(500).json({
                 success: false,
                 error: "Erreur lors de la récupération de la disponibilité",

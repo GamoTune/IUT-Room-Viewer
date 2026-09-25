@@ -9,11 +9,8 @@ import { ApiService } from "../services/api.service.js";
 import { createRoomAvailabilityEmbed } from "../utils/embed-builder.js";
 import { logCommand } from "../services/logger.service.js";
 
-
 export const sallesMaintenantCommand: BotCommand = {
-    data: new SlashCommandBuilder()
-        .setName("salles_maintenant")
-        .setDescription("Affiche l'état actuel des salles."),
+    data: new SlashCommandBuilder().setName("salles_maintenant").setDescription("Affiche l'état actuel des salles."),
 
     async execute(interaction) {
         await interaction.deferReply();
@@ -22,10 +19,7 @@ export const sallesMaintenantCommand: BotCommand = {
             const now = new Date();
             const rooms = await ApiService.instance.getRoomsAvailability(now, now);
 
-            const embed = createRoomAvailabilityEmbed(
-                rooms,
-                "État actuel des salles"
-            );
+            const embed = createRoomAvailabilityEmbed(rooms, "État actuel des salles");
 
             await interaction.editReply({ embeds: [embed] });
             logCommand(interaction);
