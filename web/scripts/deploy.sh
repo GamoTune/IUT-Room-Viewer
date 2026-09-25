@@ -6,9 +6,9 @@
 #   DRY_RUN=1 bun run deploy             # simulation
 #   bun run deploy                       # envoi réel
 #
-# Le chemin normal est un tag `web-v*` et la CI ; ce script est le secours quand
-# la forge est hors ligne — et le seul chemin tant que le dépôt vit sur GitHub,
-# où le workflow Forgejo ne se déclenche pas.
+# Le chemin normal est un tag `web-v*` et la CI (.github/workflows/deploy-web.yml) ;
+# ce script reste le secours quand GitHub Actions est indisponible, ou pour
+# pousser un correctif sans passer par un tag.
 #
 # Le mot de passe est demandé par lftp : il n'est ni stocké ni passé en argument,
 # où il apparaîtrait dans l'historique du shell et dans `ps`.

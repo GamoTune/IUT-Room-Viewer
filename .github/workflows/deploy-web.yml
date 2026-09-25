@@ -1,0 +1,134 @@
+name: Déployer le site
+
+# Déploiement du front (`web/`) vers l'hébergement mutualisé OVH, sur tag `web-v*`.
+#
+#   cd web && bun pm version minor      # ou éditer web/package.json
+#   git tag web-v0.3.0 && git push --follow-tags
+#
+# Le tag est préfixé parce que le dépôt porte trois paquets : `web-v*` ne
+# déclenche que le front, laissant `v*` disponible pour le serveur et le bot.
+#
+# Le mutualisé n'exécute ni Bun ni Node : le site est construit ici, seul
+# `web/dist/` part. Le transfert passe par SFTP et non rsync — l'hébergement
+# mutualisé n'offre pas de shell distant.
+#
+# ┌─ PRÉREQUIS CÔTÉ DÉPÔT ─────────────────────────────────────────────────────┐
+# │ Secret  DEPLOY_HOST       → sftp.clusterXXX.hosting.ovh.net (sans schéma)  │
+# │ Secret  DEPLOY_USER       → identifiant SFTP OVH                           │
+# │ Secret  DEPLOY_PASSWORD   → mot de passe SFTP OVH                          │
+# │ Variable DEPLOY_PATH      → docroot du sous-domaine, relatif au home       │
+# │ Variable API_BASE_URL     → racine publique de l'API, sans barre finale    │
+# └────────────────────────────────────────────────────────────────────────────┘
+#
+# Aucun `.htaccess` n'est nécessaire : le routage est par hash (`#/salles`), il
+# ne quitte jamais le navigateur. Une seule page est servie, `index.html`.
+#
+# `--delete` suppose un docroot dédié à ce site. Si le sous-domaine partage son
+# dossier avec autre chose, ajouter les exclusions ici.
+
+on:
+  push:
+    tags:
+      - "web-v*"
+  workflow_dispatch:
+
+# Deux déploiements ne doivent jamais se croiser sur le même hébergement ; et on
+# n'annule pas celui qui est en cours, il a déjà commencé à écrire des fichiers.
+concurrency:
+  group: deploy-web
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  BUN_VERSION: "1.3.14"
+
+jobs:
+  deploy:
+    name: Front - Construction et envoi SFTP
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # Avant de payer une installation et une construction : un secret oublié
+      # se voit ici, pas après trois minutes.
+      - name: Vérifier les prérequis
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
+          # Sans elle, le site déployé interrogerait sa propre origine, où il n'y
+          # a pas d'API : autant échouer ici plutôt que dans le navigateur.
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+        run: |
+          for nom in DEPLOY_HOST DEPLOY_USER DEPLOY_PASSWORD API_BASE_URL; do
+            [ -n "${!nom}" ] || { echo "$nom absent : voir l'en-tête du workflow." >&2; exit 1; }
+          done
+
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Vérifier que le tag suit web/package.json
+        if: github.ref_type == 'tag'
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION=$(bun -e 'console.log(require("./web/package.json").version)')
+          [ "$VERSION" = "${TAG#web-v}" ] || {
+            echo "Tag $TAG incohérent avec la version $VERSION de web/package.json" >&2
+            exit 1
+          }
+
+      # Installation à la racine : les dépendances du front sont résolues par les
+      # espaces de travail Bun, pas depuis `web/`.
+      - name: Installer les dépendances
+        run: bun install --frozen-lockfile
+
+      - name: Construire le front
+        env:
+          VITE_API_BASE_URL: ${{ vars.API_BASE_URL }}
+        run: bun --filter web build
+
+      - name: Contrôler ce qui va partir
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+        working-directory: web
+        run: |
+          test -f dist/index.html || { echo "dist/index.html manquant" >&2; exit 1; }
+          grep -q "$API_BASE_URL" dist/assets/*.js || {
+            echo "La racine de l'API n'est pas dans le bundle : construction sans VITE_API_BASE_URL ?" >&2
+            exit 1
+          }
+
+      - name: Installer lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      # `--env-password` : le mot de passe reste dans l'environnement du
+      # processus, il n'apparaît ni dans la ligne de commande ni dans `ps`.
+      - name: Envoyer vers l'hébergement
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          LFTP_PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+        working-directory: web
+        run: |
+          lftp -u "$DEPLOY_USER" --env-password "sftp://$DEPLOY_HOST" -e "
+            set sftp:auto-confirm yes;
+            mirror --reverse --delete --verbose --exclude-glob '.DS_Store' dist/ '$DEPLOY_PATH/';
+            bye"
+
+      # Le déploiement n'est fini que si le site répond avec le nouveau contenu.
+      - name: Vérifier le site en ligne
+        env:
+          SITE_URL: ${{ vars.SITE_URL || 'https://iut.gamo.one' }}
+        run: |
+          BUNDLE=$(basename "$(ls web/dist/assets/*.js | head -1)")
+          curl --fail --silent --show-error --retry 5 --retry-delay 3 "$SITE_URL" | grep -q "$BUNDLE" || {
+            echo "Le site ne sert pas encore $BUNDLE — cache ou envoi incomplet." >&2
+            exit 1
+          }
