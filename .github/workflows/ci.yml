@@ -123,8 +123,8 @@ jobs:
 
       - name: Appliquer les migrations
         run: |
-          docker compose exec -T api sh -c \
-            'cd /app/server && bun /app/node_modules/typeorm/cli.js migration:run -d src/utils/dataSource.ts'
+          docker compose exec -T api \
+            bun /app/node_modules/typeorm/cli.js migration:run -d src/utils/dataSource.ts
 
       - name: Test de fumée
         run: |

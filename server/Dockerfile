@@ -34,18 +34,23 @@ RUN bun install --frozen-lockfile --production --filter=server
 
 # --- Exécution -------------------------------------------------------------
 FROM oven/bun:1.3.14-alpine AS runtime
-WORKDIR /app
+# Le répertoire de travail est celui du paquet, pas la racine : Bun lit le
+# `tsconfig.json` à partir de là, et les entités TypeORM ont besoin de ses
+# décorateurs historiques (`experimentalDecorators`). Lancé depuis la racine,
+# le serveur compile avec les décorateurs standards et s'arrête au premier
+# `@PrimaryGeneratedColumn`.
+WORKDIR /app/server
 
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=3000
 
-COPY --from=deps /app/node_modules ./node_modules
-COPY package.json bun.lock ./
-COPY server ./server
+COPY --from=deps /app/node_modules /app/node_modules
+COPY package.json bun.lock /app/
+COPY server /app/server
 # Bun ne remonte pas tout à la racine : les dépendances d'un espace de travail
 # vivent dans son propre `node_modules`, en liens symboliques vers le magasin.
-COPY --from=deps /app/server/node_modules ./server/node_modules
+COPY --from=deps /app/server/node_modules /app/server/node_modules
 
 # L'image de base fournit l'utilisateur `bun` : le serveur ne tourne pas en root.
 USER bun
@@ -56,4 +61,4 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
     CMD bun --eval "fetch('http://127.0.0.1:' + (process.env.PORT ?? 3000) + '/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 
-CMD ["bun", "server/src/index.ts"]
+CMD ["bun", "src/index.ts"]
