@@ -13,8 +13,7 @@ import type { FetchOutcome } from "./types.js";
  * sont republiés en cours d'année et l'historique permet de comprendre après
  * coup ce qui a changé.
  */
-export const BACKUP_ROOT =
-    process.env.EDT_BACKUP_DIR ?? path.resolve(process.cwd(), "data", "backup");
+export const BACKUP_ROOT = process.env.EDT_BACKUP_DIR ?? path.resolve(process.cwd(), "data", "backup");
 
 export interface ConditionalHeaders {
     etag?: string | null;
@@ -27,7 +26,10 @@ export interface ConditionalHeaders {
 function fileStamp(value: string | null): string {
     const date = value ? new Date(value) : new Date();
     const safe = Number.isNaN(date.getTime()) ? new Date() : date;
-    return safe.toISOString().replace(/:/g, "-").replace(/\.\d{3}/, "");
+    return safe
+        .toISOString()
+        .replace(/:/g, "-")
+        .replace(/\.\d{3}/, "");
 }
 
 /**

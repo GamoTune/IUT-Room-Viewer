@@ -33,4 +33,3 @@ export const interactionCreateEvent: BotEvent = {
         }
     },
 };
-

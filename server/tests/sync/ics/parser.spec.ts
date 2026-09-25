@@ -57,8 +57,7 @@ describe("parseIcsDate", () => {
 
 describe("parseIcs", () => {
     /** Assemble un fichier ICS minimal autour de lignes d'événement. */
-    const fichier = (...lignes: string[]) =>
-        ["BEGIN:VCALENDAR", ...lignes, "END:VCALENDAR"].join("\r\n");
+    const fichier = (...lignes: string[]) => ["BEGIN:VCALENDAR", ...lignes, "END:VCALENDAR"].join("\r\n");
 
     const événement = (...lignes: string[]) => fichier("BEGIN:VEVENT", ...lignes, "END:VEVENT");
 
@@ -115,11 +114,7 @@ describe("parseIcs", () => {
 
     it("décode le quoted-printable quand il est annoncé", () => {
         const events = parseIcs(
-            événement(
-                "DTSTART:20260910T080000",
-                "DTEND:20260910T100000",
-                "SUMMARY;ENCODING=QUOTED-PRINTABLE:Qualit=E9",
-            ),
+            événement("DTSTART:20260910T080000", "DTEND:20260910T100000", "SUMMARY;ENCODING=QUOTED-PRINTABLE:Qualit=E9"),
         );
         expect(events[0]!.summary).toBe("Qualité");
     });
@@ -128,22 +123,14 @@ describe("parseIcs", () => {
         // L'IUT annonce QUOTED-PRINTABLE sur des textes qui ne le sont pas :
         // décoder sans discernement casserait le premier intitulé contenant « = ».
         const events = parseIcs(
-            événement(
-                "DTSTART:20260910T080000",
-                "DTEND:20260910T100000",
-                "SUMMARY;ENCODING=QUOTED-PRINTABLE:a=b et c=ZZ",
-            ),
+            événement("DTSTART:20260910T080000", "DTEND:20260910T100000", "SUMMARY;ENCODING=QUOTED-PRINTABLE:a=b et c=ZZ"),
         );
         expect(events[0]!.summary).toBe("a=b et c=ZZ");
     });
 
     it("déplie les échappements du format", () => {
         const events = parseIcs(
-            événement(
-                "DTSTART:20260910T080000",
-                "DTEND:20260910T100000",
-                "SUMMARY:ligne\\nsuite\\, fin\; et\\\\bar",
-            ),
+            événement("DTSTART:20260910T080000", "DTEND:20260910T100000", "SUMMARY:ligne\\nsuite\\, fin\\; et\\\\bar"),
         );
         expect(events[0]!.summary).toBe("ligne suite, fin; et\\bar");
     });
@@ -156,16 +143,12 @@ describe("parseIcs", () => {
     });
 
     it("ignore un paramètre mal formé sans perdre la propriété", () => {
-        const events = parseIcs(
-            événement("DTSTART:20260910T080000", "DTEND:20260910T100000", "SUMMARY;SANSEGAL:texte"),
-        );
+        const events = parseIcs(événement("DTSTART:20260910T080000", "DTEND:20260910T100000", "SUMMARY;SANSEGAL:texte"));
         expect(events[0]!.summary).toBe("texte");
     });
 
     it("ignore les propriétés qui ne l'intéressent pas", () => {
-        const events = parseIcs(
-            événement("DTSTART:20260910T080000", "DTEND:20260910T100000", "DESCRIPTION:hors sujet"),
-        );
+        const events = parseIcs(événement("DTSTART:20260910T080000", "DTEND:20260910T100000", "DESCRIPTION:hors sujet"));
         expect(events).toHaveLength(1);
     });
 

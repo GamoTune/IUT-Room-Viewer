@@ -4,7 +4,6 @@
 // ============================================
 
 import type { LessonType } from "../../entities/enums.js";
-import type { RawIcsEvent } from "./parser.js";
 
 import { NO_ROOM } from "../rooms.js";
 

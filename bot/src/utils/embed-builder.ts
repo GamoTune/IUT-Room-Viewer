@@ -7,19 +7,17 @@ import { EmbedBuilder } from "discord.js";
 import type { RoomWithLessonsResponse, LessonResponse, Course } from "../types/index.js";
 import { formatGroupCode } from "./format.js";
 
-
 interface Field {
     name: string;
     value: string;
     inline: boolean;
 }
 
-
 // Salles physiquement identiques : fusionner leurs cours pour l'affichage
 // Si R46 ou R47 est occupée, les deux sont occupées
 const ROOM_ALIASES: Record<string, string[]> = {
-    "R46": ["R46", "R47"],
-    "R47": ["R46", "R47"],
+    R46: ["R46", "R47"],
+    R47: ["R46", "R47"],
 };
 
 /**
@@ -88,9 +86,7 @@ function formatRoomStatus(room: RoomWithLessonsResponse): string {
 
     // Single lesson - show details
     const lesson = lessons[0];
-    const group = lesson.groups[0]
-        ? formatGroupCode(lesson.groups[0].mainGroup, lesson.groups[0].subGroup)
-        : "";
+    const group = lesson.groups[0] ? formatGroupCode(lesson.groups[0].mainGroup, lesson.groups[0].subGroup) : "";
     const teacher = lesson.teacher ?? "?";
 
     return `\`${name} ❌ - ${lesson.contentCode} (${teacher}) (${group})\``;
@@ -138,10 +134,7 @@ export function createRoomFields(rooms: RoomWithLessonsResponse[]): Field[] {
 /**
  * Create a room availability embed
  */
-export function createRoomAvailabilityEmbed(
-    rooms: RoomWithLessonsResponse[],
-    description: string
-): EmbedBuilder {
+export function createRoomAvailabilityEmbed(rooms: RoomWithLessonsResponse[], description: string): EmbedBuilder {
     const fields: Field[] = createRoomFields(rooms);
 
     return new EmbedBuilder()
@@ -152,21 +145,17 @@ export function createRoomAvailabilityEmbed(
         .setFooter({ text: "✅ : Disponible  |  ❌ : Occupée" });
 }
 
-
-
-
 // ---------------------------------------------
 
-
-
 function createEDTFields(courses: Course[]): Field[] {
-
     if (courses.length === 0) {
-        return [{
-            name: "Aucun cours",
-            value: "Vous n'avez pas de cours programmés.",
-            inline: false
-        }];
+        return [
+            {
+                name: "Aucun cours",
+                value: "Vous n'avez pas de cours programmés.",
+                inline: false,
+            },
+        ];
     }
 
     // Séparer les cours en Matin et Après-midi
@@ -177,11 +166,11 @@ function createEDTFields(courses: Course[]): Field[] {
         const startDate = new Date(course.start_at);
         const start = startDate.toLocaleTimeString("fr-FR", {
             hour: "2-digit",
-            minute: "2-digit"
+            minute: "2-digit",
         });
         const end = new Date(course.end_at).toLocaleTimeString("fr-FR", {
             hour: "2-digit",
-            minute: "2-digit"
+            minute: "2-digit",
         });
 
         const rooms = course.rooms.join(", ") || "?";
@@ -205,34 +194,20 @@ function createEDTFields(courses: Course[]): Field[] {
     fields.push({
         name: "🌅 Matin",
         value: matin.length > 0 ? matin.join("\n") : "Aucun cours",
-        inline: false
+        inline: false,
     });
 
     fields.push({
         name: "🌇 Après-midi",
         value: apresMidi.length > 0 ? apresMidi.join("\n") : "Aucun cours",
-        inline: false
+        inline: false,
     });
 
     return fields;
 }
 
-
-
-
-
-
-
-
-export function createEDTEmbed(
-    courses: Course[],
-    description: string,
-): EmbedBuilder {
+export function createEDTEmbed(courses: Course[], description: string): EmbedBuilder {
     const fields: Field[] = createEDTFields(courses);
 
-    return new EmbedBuilder()
-        .setColor("#a66949")
-        .setTitle("Emploi du temps")
-        .setDescription(description)
-        .addFields(fields);
+    return new EmbedBuilder().setColor("#a66949").setTitle("Emploi du temps").setDescription(description).addFields(fields);
 }

@@ -42,8 +42,7 @@ const singleDay = computed(() => (wide.value ? null : Math.min(dayIndex.value, 5
 
 const weekLabel = computed(() => {
     const end = addDays(monday.value, 5);
-    const format = (date: Date) =>
-        date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+    const format = (date: Date) => date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
     return `${format(monday.value)} → ${format(end)}`;
 });
 

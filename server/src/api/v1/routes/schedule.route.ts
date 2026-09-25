@@ -6,7 +6,7 @@
 import { Router } from "express";
 
 // On importe le contrôleur
-import { getSchedule } from '../../../controllers/schedule.controller.js';
+import { getSchedule } from "../../../controllers/schedule.controller.js";
 
 // Créer un routeur Express
 const router = Router();
@@ -16,6 +16,6 @@ const router = Router();
 // ============================================
 
 // Schedule routes
-router.get('/', getSchedule);
+router.get("/", getSchedule);
 
 export { router as scheduleRoutes };

@@ -6,15 +6,15 @@ export interface Course {
     code: string;
     title: string;
     startTime: string; // ISO 8601
-    endTime: string;   // ISO 8601
+    endTime: string; // ISO 8601
     room: string;
     teacher?: string;
-    type?: 'CM' | 'TD' | 'TP' | 'DS' | 'SAE' | 'Autre';
+    type?: "CM" | "TD" | "TP" | "DS" | "SAE" | "Autre";
 }
 export interface ScheduleQuery {
-    group: string;      // e.g., "G3", "G5" - Le numéro déduit l'année automatiquement
-    tp?: string;        // e.g., "A", "B"
-    date?: string;      // ISO date, default: today
+    group: string; // e.g., "G3", "G5" - Le numéro déduit l'année automatiquement
+    tp?: string; // e.g., "A", "B"
+    date?: string; // ISO date, default: today
 }
 export interface ScheduleResponse {
     group: string;

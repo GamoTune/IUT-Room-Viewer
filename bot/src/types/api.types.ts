@@ -11,7 +11,7 @@ export interface LessonResponse {
     type: string;
     startTime: string;
     endTime: string;
-    rooms: string[];  // Array of room names (many-to-many)
+    rooms: string[]; // Array of room names (many-to-many)
     teacher: string | null;
     contentCode: string;
     contentName: string;
@@ -41,9 +41,6 @@ export interface ApiResponse<T> {
  */
 export type RoomsAvailabilityResponse = ApiResponse<RoomWithLessonsResponse[]>;
 
-
-
-
 export interface Course {
     code: string;
     title: string;
@@ -52,9 +49,8 @@ export interface Course {
     groups: string[];
     teacher: string;
     start_at: string; // ISO date string
-    end_at: string;   // ISO date string
+    end_at: string; // ISO date string
 }
-
 
 /**
  * Courses API parameters
@@ -63,7 +59,7 @@ export interface CoursesApiParams {
     startAt: Date;
     endAt: Date;
     groups?: string[]; // Optional array of group names
-    rooms?: string[];  // Optional array of room names
+    rooms?: string[]; // Optional array of room names
     teachers?: string[]; // Optional array of teacher names
 }
 

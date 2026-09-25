@@ -9,9 +9,9 @@ import type { Course } from "../types/course.types.js";
 
 export interface GET_COURSES_SERVICE_PARAMS {
     start_at: string; // ISO date string
-    end_at: string;   // ISO date string
-    groups?: string;  // codes de groupes séparés par des virgules
-    rooms?: string;   // noms de salles séparés par des virgules
+    end_at: string; // ISO date string
+    groups?: string; // codes de groupes séparés par des virgules
+    rooms?: string; // noms de salles séparés par des virgules
     teachers?: string; // formes d'enseignant séparées par des virgules
 }
 
@@ -25,10 +25,7 @@ export class CourseService {
      * Normalise une chaîne : minuscules + suppression des accents
      */
     private normalize(value: string): string {
-        return value
-            .toLowerCase()
-            .normalize("NFD")
-            .replace(/[̀-ͯ]/g, "");
+        return value.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
     }
 
     /**

@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
 export class AddSaeLessonType1789032980000 implements MigrationInterface {
-    name = 'AddSaeLessonType1789032980000'
+    name = "AddSaeLessonType1789032980000";
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         // `ALTER TYPE ... ADD VALUE` ne se réverse pas : on recrée le type, ce

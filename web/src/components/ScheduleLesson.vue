@@ -20,8 +20,7 @@ const titleLines = computed(() => Math.min(span - 1, 3));
 const hasOwnTitle = computed(() => course.title.trim() !== "" && course.title.trim() !== course.code);
 
 const hours = computed(() => {
-    const format = (value: string) =>
-        new Date(value).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    const format = (value: string) => new Date(value).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
     return `${format(course.start_at)} – ${format(course.end_at)}`;
 });
 

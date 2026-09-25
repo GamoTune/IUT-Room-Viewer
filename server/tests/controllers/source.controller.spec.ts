@@ -54,7 +54,10 @@ describe("SourceController", () => {
         it("refuse un groupe passé en tableau", async () => {
             // `?group=G8a&group=G8b` : Express rend alors un tableau.
             const { res, code } = fakeResponse();
-            await SourceController.instance.getWeek(requête({ group: ["G8a", "G8b"], start_at: "2026-09-06T22:00:00.000Z" }), res);
+            await SourceController.instance.getWeek(
+                requête({ group: ["G8a", "G8b"], start_at: "2026-09-06T22:00:00.000Z" }),
+                res,
+            );
 
             expect(code()).toBe(400);
         });

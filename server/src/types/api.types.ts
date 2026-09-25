@@ -17,6 +17,6 @@ export interface ApiResponse<T> {
  * Paramètres de plage horaire (utilisés dans les query params)
  */
 export interface TimeRangeQuery {
-    startTime: string;  // ISO datetime string
-    endTime: string;    // ISO datetime string
+    startTime: string; // ISO datetime string
+    endTime: string; // ISO datetime string
 }

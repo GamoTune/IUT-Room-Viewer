@@ -27,7 +27,8 @@ export const schemas = {
 
     Room: {
         type: "object",
-        description: "Une salle du référentiel. La liste est figée : une salle citée par l'IUT mais absente d'ici est signalée comme inconnue plutôt que créée.",
+        description:
+            "Une salle du référentiel. La liste est figée : une salle citée par l'IUT mais absente d'ici est signalée comme inconnue plutôt que créée.",
         properties: {
             id: { type: "integer", example: 7 },
             name: { type: "string", example: "103" },

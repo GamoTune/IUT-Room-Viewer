@@ -56,9 +56,7 @@ const freeCount = computed(() =>
     floors.value.reduce((total, floor) => total + floor.rooms.filter((room) => !room.busy).length, 0),
 );
 
-const totalCount = computed(() =>
-    floors.value.reduce((total, floor) => total + floor.rooms.length, 0),
-);
+const totalCount = computed(() => floors.value.reduce((total, floor) => total + floor.rooms.length, 0));
 
 const mineCount = computed(() =>
     floors.value.reduce((total, floor) => total + floor.rooms.filter((room) => room.mine).length, 0),
@@ -83,9 +81,7 @@ const loading = computed(() => totalCount.value === 0 && freshness.value === "re
                 <Button ghost size="sm" @click="picker.shiftDay(-1)">← Jour précédent</Button>
                 <div class="picker__center">
                     <span class="picker__date">{{ dayLabel }}</span>
-                    <Button v-if="!picker.window.value.live" ghost size="sm" @click="picker.now()">
-                        Maintenant
-                    </Button>
+                    <Button v-if="!picker.window.value.live" ghost size="sm" @click="picker.now()"> Maintenant </Button>
                 </div>
                 <Button ghost size="sm" @click="picker.shiftDay(1)">Jour suivant →</Button>
             </div>
@@ -123,8 +119,8 @@ const loading = computed(() => totalCount.value === 0 && freshness.value === "re
         </Alert>
 
         <p v-if="totalCount > 0" class="rooms__summary">
-            <strong>{{ freeCount }}</strong> salle{{ freeCount > 1 ? "s" : "" }} libre{{ freeCount > 1 ? "s" : "" }}
-            sur {{ totalCount }}
+            <strong>{{ freeCount }}</strong> salle{{ freeCount > 1 ? "s" : "" }} libre{{ freeCount > 1 ? "s" : "" }} sur
+            {{ totalCount }}
             <template v-if="!picker.window.value.live">sur tout le créneau</template>
             <template v-if="mineCount > 0">
                 · <strong class="rooms__mine">{{ mineCount }}</strong> pour {{ group?.label }}
@@ -144,12 +140,7 @@ const loading = computed(() => totalCount.value === 0 && freshness.value === "re
         <Surface v-for="floor in floors" v-else :key="floor.label" level="card" padding="lg" as="section">
             <h2 class="rooms__floor">{{ floor.label }}</h2>
             <div class="rooms__grid">
-                <RoomStatus
-                    v-for="state in floor.rooms"
-                    :key="state.room.id"
-                    :state="state"
-                    :live="picker.window.value.live"
-                />
+                <RoomStatus v-for="state in floor.rooms" :key="state.room.id" :state="state" :live="picker.window.value.live" />
             </div>
         </Surface>
     </div>
