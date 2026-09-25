@@ -27,7 +27,10 @@ COPY web/package.json web/
 # Le front dépend de `@gamo/ds`, hébergé sur une forge privée et déclaré dans un
 # `.npmrc` qui ne quitte pas le poste de développement : c'est `bun.lock`, avec
 # l'URL déjà résolue, qui rend l'installation reproductible ici.
-RUN bun install --frozen-lockfile --production
+#
+# `--filter=server` n'installe que les dépendances de l'API : sans lui, Vue,
+# le design system et discord.js entrent aussi dans l'image (186 Mo contre 119).
+RUN bun install --frozen-lockfile --production --filter=server
 
 # --- Exécution -------------------------------------------------------------
 FROM oven/bun:1.3.14-alpine AS runtime
@@ -40,6 +43,9 @@ ENV NODE_ENV=production \
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json bun.lock ./
 COPY server ./server
+# Bun ne remonte pas tout à la racine : les dépendances d'un espace de travail
+# vivent dans son propre `node_modules`, en liens symboliques vers le magasin.
+COPY --from=deps /app/server/node_modules ./server/node_modules
 
 # L'image de base fournit l'utilisateur `bun` : le serveur ne tourne pas en root.
 USER bun
