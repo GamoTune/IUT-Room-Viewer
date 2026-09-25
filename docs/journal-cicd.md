@@ -328,3 +328,73 @@ Ici, ce qui est éprouvé est exactement ce qui pourrait partir en production.
 - **Réduire la taille** : `bun build --compile` produit un binaire autonome, mais `pdfjs-dist`
   résout ses polices par `createRequire`, ce qui casse dans un binaire compilé. À mesurer plutôt
   qu'à supposer.
+
+---
+
+## 2026-09-25 — Étape 5 : le déploiement continu, ou le pipeline fantôme
+
+### Le défaut, d'abord
+
+Le dépôt contenait `.forgejo/workflows/deploy-web.yml` : un déploiement complet du front, déclenché
+par un tag `web-v*`. Tout y était — construction, contrôle du bundle, envoi SFTP. Un détail :
+c'est un workflow **Forgejo**, et le dépôt vit sur **GitHub**, sans miroir sur la forge.
+
+**Il ne s'est jamais exécuté une seule fois.** Et personne ne l'a remarqué, parce qu'un pipeline qui
+ne se déclenche pas n'échoue jamais : aucune croix rouge, aucune notification. C'est le pire état
+possible pour une chaîne — on croit être couvert. Pendant ce temps le front partait à la main, par
+`bun run deploy`, depuis mon poste, avec mes identifiants dans `~/.netrc`.
+
+Le cours insiste sur la traçabilité et la reproductibilité (pages 4 et 22) : un déploiement manuel
+n'a ni l'une ni l'autre. Personne ne sait ce qui est en ligne, ni depuis quand, ni qui l'a envoyé.
+
+### Ce que fait le nouveau workflow
+
+Sur tag `web-v*` :
+
+1. **Contrôle des prérequis avant tout travail.** Un secret oublié se voit en cinq secondes, pas
+   après trois minutes de construction.
+2. **Le tag doit correspondre** à la version de `web/package.json` : impossible de publier une
+   `web-v0.3.0` depuis un paquet resté en `0.2.0`.
+3. **Construction** avec `VITE_API_BASE_URL`, puis **contrôle de ce qui va partir** : la racine de
+   l'API doit réellement figurer dans le bundle. Sans ce garde-fou, le site déployé interroge sa
+   propre origine — c'est exactement la panne qui était arrivée en production en septembre.
+4. **Envoi SFTP** en miroir avec suppression. Le mot de passe passe par l'environnement
+   (`lftp --env-password`), jamais par la ligne de commande où `ps` le lirait.
+5. **Vérification du site en ligne** : le job n'est vert que si `iut.gamo.one` sert bien le nouveau
+   bundle. Un envoi partiel ou un cache figé fait échouer le déploiement au lieu de passer inaperçu.
+
+### Livraison ou déploiement ?
+
+Le cours distingue les deux (page 28). Ici c'est bien du **déploiement continu** : l'artefact part
+directement en production, sans validation humaine intermédiaire. C'est défendable pour un site
+statique consulté par quelques dizaines d'étudiants, où un retour en arrière coûte un tag. Ça ne le
+serait pas pour l'API, qui porte une base de données et des migrations : là, il faudrait une étape
+d'approbation et un environnement de pré-production.
+
+**Le déclencheur est un tag, pas un push sur `main`.** C'est un choix : tout ce qui est fusionné
+n'est pas forcément à mettre en ligne. Le tag est l'acte délibéré de livrer.
+
+### Comparatif : GitHub Actions et Forgejo Actions
+
+J'ai les deux sous la main — le design system est déployé par ma propre forge.
+
+|                    | GitHub Actions                                   | Forgejo Actions (homelab)                           |
+| ------------------ | ------------------------------------------------ | --------------------------------------------------- |
+| Runners            | Fournis, illimités sur dépôt public              | À héberger : un runner et des workers LXC jetables  |
+| Démarrage d'un job | ~5 s                                             | ~20 s, le temps de cloner le conteneur modèle       |
+| Syntaxe            | La référence                                     | Compatible, mais toutes les actions ne marchent pas |
+| Écosystème         | Toutes les actions du Marketplace                | Les actions GitHub souvent, sinon les siennes       |
+| Secrets            | Chiffrés, masqués dans les journaux              | Idem                                                |
+| Coût               | Gratuit ici, facturé à la minute sur dépôt privé | L'électricité et le temps de maintenance            |
+| Souveraineté       | Aucune : tout passe chez Microsoft               | Totale                                              |
+
+Pour ce projet, GitHub Actions s'impose puisque le code y est déjà. Mais l'expérience de la forge
+apprend quelque chose que GitHub cache : **un runner, ça se maintient**. Mises à jour, espace disque,
+images de base qui dérivent. Le confort du runner géré a un prix, simplement il n'est pas visible.
+
+### Reste à éprouver
+
+- Faire tourner le workflow pour de vrai : il attend cinq secrets et variables côté dépôt.
+- Étendre au serveur : aujourd'hui il tourne sous PM2, mis à jour à la main. L'image construite à
+  l'étape 4 est le chaînon manquant — reste à la publier dans un registre et à la faire tirer par le
+  serveur.
