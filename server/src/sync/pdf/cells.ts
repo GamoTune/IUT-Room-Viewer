@@ -59,12 +59,7 @@ export function buildCells(page: PageGeometry, scale: TimeScale, bands: Band[]):
  * supérieur gauche, seul point dont la position soit sûre.
  */
 function isInside(item: TextItem, rect: FilledRect): boolean {
-    return (
-        item.x >= rect.left - EPSILON &&
-        item.x < rect.right &&
-        item.y >= rect.top - EPSILON &&
-        item.y < rect.bottom
-    );
+    return item.x >= rect.left - EPSILON && item.x < rect.right && item.y >= rect.top - EPSILON && item.y < rect.bottom;
 }
 
 /**

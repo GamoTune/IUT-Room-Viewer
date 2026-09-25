@@ -228,7 +228,8 @@ export const swaggerDocument = {
                                                 group: { type: "string", example: "G8" },
                                                 year: {
                                                     type: "string",
-                                                    description: "Nommée `BUT1`/`BUT2`/`BUT3` sur cette route, contrairement au reste de l'API.",
+                                                    description:
+                                                        "Nommée `BUT1`/`BUT2`/`BUT3` sur cette route, contrairement au reste de l'API.",
                                                     example: "BUT3",
                                                 },
                                                 tp: { type: "string", nullable: true, example: "A" },
@@ -245,14 +246,16 @@ export const swaggerDocument = {
                                                             endTime: { type: "string", format: "date-time" },
                                                             room: {
                                                                 type: "string",
-                                                                description: "Salles réunies en une chaîne, contrairement à la v2.",
+                                                                description:
+                                                                    "Salles réunies en une chaîne, contrairement à la v2.",
                                                                 example: "111, 112",
                                                             },
                                                             teacher: { type: "string", nullable: true },
                                                             type: {
                                                                 type: "string",
                                                                 enum: ["CM", "TD", "TP", "DS", "SAE", "Autre"],
-                                                                description: "Nomenclature propre à cette route, distincte de celle des autres.",
+                                                                description:
+                                                                    "Nomenclature propre à cette route, distincte de celle des autres.",
                                                             },
                                                         },
                                                     },

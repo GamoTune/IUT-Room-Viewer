@@ -3,7 +3,13 @@
 // API client for fetching data from the server
 // ============================================
 
-import type { RoomsAvailabilityResponse, RoomWithLessonsResponse, CoursesApiParams, CoursesApiResponse, Course } from "../types/index.js";
+import type {
+    RoomsAvailabilityResponse,
+    RoomWithLessonsResponse,
+    CoursesApiParams,
+    CoursesApiResponse,
+    Course,
+} from "../types/index.js";
 
 const API_URL = process.env.API_URL || "http://localhost:3000";
 
@@ -29,7 +35,6 @@ export class ApiService {
 
         const response = await fetch(url);
 
-    
         const data = (await response.json()) as RoomsAvailabilityResponse;
 
         if (!data.success) {
@@ -62,7 +67,7 @@ export class ApiService {
         const rooms: string | undefined = params.rooms ? params.rooms.join(",") : undefined;
         const teachers: string | undefined = params.teachers ? params.teachers.join(",") : undefined;
         const url = `${API_URL}/api/v2/courses?start_at=${start_at.toISOString()}&end_at=${end_at.toISOString()}${groups ? `&groups=${groups}` : ""}${rooms ? `&rooms=${rooms}` : ""}${teachers ? `&teachers=${teachers}` : ""}`;
-        
+
         const response = await fetch(url);
         const data = (await response.json()) as CoursesApiResponse;
 
@@ -74,5 +79,4 @@ export class ApiService {
 
         return data.data;
     }
-
-    }
+}

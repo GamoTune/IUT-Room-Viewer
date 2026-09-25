@@ -54,9 +54,7 @@ export class SyncService {
             const files = await discoverFiles();
             const timetables = files.filter((file) => file.format === "pdf" && isYearFile(file));
 
-            console.log(
-                `🔍 ${files.length} fichiers publiés, dont ${timetables.length} emplois du temps d'année`,
-            );
+            console.log(`🔍 ${files.length} fichiers publiés, dont ${timetables.length} emplois du temps d'année`);
 
             for (const file of timetables) {
                 try {
@@ -234,12 +232,7 @@ export class SyncService {
         };
     }
 
-    private buildSummary(
-        startedAt: Date,
-        filesDiscovered: number,
-        results: FileSyncResult[],
-        errors: string[],
-    ): SyncSummary {
+    private buildSummary(startedAt: Date, filesDiscovered: number, results: FileSyncResult[], errors: string[]): SyncSummary {
         return {
             success: errors.length === 0,
             startedAt,

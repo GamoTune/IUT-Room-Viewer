@@ -103,12 +103,7 @@ export async function parseTimetable(data: Uint8Array, _year: Year): Promise<Par
  * Type d'un créneau. Une SAÉ n'est ni un CM, ni un TD, ni un TP : la déduire de
  * la portée de sa case l'aurait rangée en TD, ce que le document ne dit pas.
  */
-function resolveType(
-    content: CellContent,
-    cell: Cell,
-    covered: Band[],
-    groupCodes: string[],
-): ParsedLesson["type"] {
+function resolveType(content: CellContent, cell: Cell, covered: Band[], groupCodes: string[]): ParsedLesson["type"] {
     if (isSaeCode(content.subjectCode)) return "SAE";
     return content.type === "OTHER" ? inferType(cell, covered, groupCodes) : content.type;
 }
@@ -206,9 +201,7 @@ export function readHeader(texts: string[]): TimetableHeader | null {
     const line = texts.find((text) => /Semaine\s+\d+/i.test(text));
     if (!line) return null;
 
-    const matched = line.match(
-        /Semaine\s+(\d+)\s*\((\d+)\)\s*:\s*du\s+(\d{2})\/(\d{2})\/(\d{4})/i,
-    );
+    const matched = line.match(/Semaine\s+(\d+)\s*\((\d+)\)\s*:\s*du\s+(\d{2})\/(\d{2})\/(\d{4})/i);
     if (!matched) return null;
 
     const [, week, isoWeek, day, month, year] = matched as unknown as string[];

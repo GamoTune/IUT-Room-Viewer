@@ -104,7 +104,10 @@ describe("CourseService", () => {
             });
 
             it("préfère la correspondance exacte à la partielle", async () => {
-                findAllTeachers.mockResolvedValue([{ id: 1, name: "Onete C." }, { id: 2, name: "CO" }] as never);
+                findAllTeachers.mockResolvedValue([
+                    { id: 1, name: "Onete C." },
+                    { id: 2, name: "CO" },
+                ] as never);
 
                 await CourseService.instance.getCourses({ ...fenêtre, teachers: "CO" });
 
@@ -113,7 +116,10 @@ describe("CourseService", () => {
 
             it("réunit les formes d'un même enseignant", async () => {
                 // La commande du bot envoie le nom et le code, sans lien entre eux.
-                findAllTeachers.mockResolvedValue([{ id: 1, name: "Onete C." }, { id: 2, name: "CO" }] as never);
+                findAllTeachers.mockResolvedValue([
+                    { id: 1, name: "Onete C." },
+                    { id: 2, name: "CO" },
+                ] as never);
 
                 await CourseService.instance.getCourses({ ...fenêtre, teachers: "Onete C.,CO" });
 

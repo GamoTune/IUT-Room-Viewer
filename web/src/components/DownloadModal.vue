@@ -143,8 +143,8 @@ function scopeLabel(file: SourceFile): string {
                 </div>
 
                 <p class="downloads__note">
-                    L'IUT ne publie de fichiers ICS que pour les sous-groupes. Seul le PDF de l'année fait foi : ceux
-                    des groupes et les ICS contiennent des erreurs connues (S1 et S2).
+                    L'IUT ne publie de fichiers ICS que pour les sous-groupes. Seul le PDF de l'année fait foi : ceux des
+                    groupes et les ICS contiennent des erreurs connues (S1 et S2).
                 </p>
             </template>
         </ModalBody>

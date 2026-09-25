@@ -3,10 +3,7 @@
 // Discord command type definitions
 // ============================================
 
-import type {
-    ChatInputCommandInteraction,
-    SharedSlashCommand,
-} from "discord.js";
+import type { ChatInputCommandInteraction, SharedSlashCommand } from "discord.js";
 
 /**
  * Discord slash command structure
@@ -25,4 +22,3 @@ export interface BotEvent {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     execute: (...args: any[]) => void | Promise<void>;
 }
-

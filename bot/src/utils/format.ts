@@ -40,7 +40,6 @@ export function formatGroupCode(mainGroup: number, subGroup: number): string {
     return main + sub;
 }
 
-
 /**
  * Pad a number with leading zeros
  */

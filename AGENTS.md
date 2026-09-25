@@ -5,15 +5,15 @@ directement dans le code : il fixe les points qui se rejouent à chaque session.
 
 ## Stack
 
-| Élément | Choix |
-| --- | --- |
-| Runtime | Bun — jamais `npm`, `npx`, `yarn`, `pnpm` |
-| Langage | TypeScript strict |
-| API | Express |
-| ORM | **TypeORM** |
-| Base | **PostgreSQL** (prod : LXC 101, `10.0.1.240:5432`) |
-| Bot | discord.js v14 |
-| Production | PM2, LXC 102 « prod » de bigboy |
+| Élément    | Choix                                              |
+| ---------- | -------------------------------------------------- |
+| Runtime    | Bun — jamais `npm`, `npx`, `yarn`, `pnpm`          |
+| Langage    | TypeScript strict                                  |
+| API        | Express                                            |
+| ORM        | **TypeORM**                                        |
+| Base       | **PostgreSQL** (prod : LXC 101, `10.0.1.240:5432`) |
+| Bot        | discord.js v14                                     |
+| Production | PM2, LXC 102 « prod » de bigboy                    |
 
 Workspaces Bun : `server/` et `bot/`. Le lockfile est `bun.lock`.
 
@@ -48,12 +48,12 @@ tests/           miroir de src/
 jamais de saut de couche. Seule exception : un controller peut appeler un repository pour charger
 les données strictement nécessaires au contrôle des droits.
 
-| Couche | Ne fait jamais |
-| --- | --- |
-| `api` | contenir de la logique |
-| `controller` | calcul métier, accès aux données |
-| `service` | lire la requête HTTP, accès aux données |
-| `repository` | logique métier, contrôle de droits |
+| Couche       | Ne fait jamais                          |
+| ------------ | --------------------------------------- |
+| `api`        | contenir de la logique                  |
+| `controller` | calcul métier, accès aux données        |
+| `service`    | lire la requête HTTP, accès aux données |
+| `repository` | logique métier, contrôle de droits      |
 
 - **Controllers et repositories sont des singletons**, exposés par une propriété statique publique :
   `public static instance: RoomController = new RoomController();`. Pas de `getInstance()`.
@@ -82,12 +82,12 @@ les données strictement nécessaires au contrôle des droits.
 
 Le bot Discord consomme ces routes : leurs formes de réponse ne changent pas sans adapter le bot.
 
-| Route | Réponse |
-| --- | --- |
-| `GET /api/v1/rooms` | `{ id, name, … }[]` |
-| `GET /api/v1/rooms/availability` | salles avec leurs cours sur la période |
-| `GET /api/v1/schedule` | EDT d'un groupe pour une date |
-| `GET /api/v2/courses` | cours filtrés par groupe, salle, enseignant |
+| Route                            | Réponse                                     |
+| -------------------------------- | ------------------------------------------- |
+| `GET /api/v1/rooms`              | `{ id, name, … }[]`                         |
+| `GET /api/v1/rooms/availability` | salles avec leurs cours sur la période      |
+| `GET /api/v1/schedule`           | EDT d'un groupe pour une date               |
+| `GET /api/v2/courses`            | cours filtrés par groupe, salle, enseignant |
 
 Les groupes sont exposés au niveau réellement concerné : promo entière → `mainGroup` négatif
 (`-1` = A1), groupe entier → `subGroup: -1`, sous-groupe → `subGroup: 1` (A) ou `2` (B).

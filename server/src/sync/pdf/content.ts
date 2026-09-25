@@ -189,7 +189,10 @@ function firstWord(line: string): string {
  * Cherche la salle dans les lignes qui suivent le titre, quelle que soit sa
  * position : elle peut être seule sur sa ligne ou accolée au type.
  */
-function findLocation(lines: string[], type: LessonType): {
+function findLocation(
+    lines: string[],
+    type: LessonType,
+): {
     roomNames: string[];
     unknownRooms: string[];
     text: string | null;

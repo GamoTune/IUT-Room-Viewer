@@ -14,27 +14,13 @@ export const sallesEntreCommand: BotCommand = {
     data: new SlashCommandBuilder()
         .setName("salles_entre")
         .setDescription("Affiche l'état des salles entre deux horaires.")
-        .addIntegerOption((option) =>
-            option.setName("heure_début").setDescription("Heure de début").setRequired(true)
-        )
-        .addIntegerOption((option) =>
-            option.setName("heure_fin").setDescription("Heure de fin").setRequired(true)
-        )
-        .addIntegerOption((option) =>
-            option.setName("minute_debut").setDescription("Minute de début").setRequired(false)
-        )
-        .addIntegerOption((option) =>
-            option.setName("minute_fin").setDescription("Minute de fin").setRequired(false)
-        )
-        .addIntegerOption((option) =>
-            option.setName("jour").setDescription("Jour").setRequired(false)
-        )
-        .addIntegerOption((option) =>
-            option.setName("mois").setDescription("Mois").setRequired(false)
-        )
-        .addIntegerOption((option) =>
-            option.setName("année").setDescription("Année").setRequired(false)
-        ),
+        .addIntegerOption((option) => option.setName("heure_début").setDescription("Heure de début").setRequired(true))
+        .addIntegerOption((option) => option.setName("heure_fin").setDescription("Heure de fin").setRequired(true))
+        .addIntegerOption((option) => option.setName("minute_debut").setDescription("Minute de début").setRequired(false))
+        .addIntegerOption((option) => option.setName("minute_fin").setDescription("Minute de fin").setRequired(false))
+        .addIntegerOption((option) => option.setName("jour").setDescription("Jour").setRequired(false))
+        .addIntegerOption((option) => option.setName("mois").setDescription("Mois").setRequired(false))
+        .addIntegerOption((option) => option.setName("année").setDescription("Année").setRequired(false)),
 
     async execute(interaction) {
         // Get required parameters

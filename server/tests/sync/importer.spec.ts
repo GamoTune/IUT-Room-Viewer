@@ -177,12 +177,7 @@ describe("Importer", () => {
         });
 
         it("compte les cours créés et les rattachements posés", async () => {
-            const bilan = await Importer.instance.importLessons(
-                caches,
-                source,
-                [parsed({ groupCodes: ["G8a", "G8b"] })],
-                "A3",
-            );
+            const bilan = await Importer.instance.importLessons(caches, source, [parsed({ groupCodes: ["G8a", "G8b"] })], "A3");
 
             expect(bilan).toEqual({ lessonsCreated: 1, lessonsLinked: 2 });
         });
@@ -203,9 +198,9 @@ describe("Importer", () => {
         });
 
         it("refuse un code de groupe illisible", async () => {
-            expect(
-                Importer.instance.importLessons(caches, source, [parsed({ groupCodes: ["???"] })], "A3"),
-            ).rejects.toThrow("Code de groupe illisible");
+            expect(Importer.instance.importLessons(caches, source, [parsed({ groupCodes: ["???"] })], "A3")).rejects.toThrow(
+                "Code de groupe illisible",
+            );
         });
     });
 
@@ -249,19 +244,34 @@ describe("Importer", () => {
 
     describe("caches d'un passage", () => {
         it("n'interroge la base qu'une fois par matière", async () => {
-            await Importer.instance.importLessons(caches, source, [parsed(), parsed({ start: new Date("2026-09-11T06:00:00.000Z") })], "A3");
+            await Importer.instance.importLessons(
+                caches,
+                source,
+                [parsed(), parsed({ start: new Date("2026-09-11T06:00:00.000Z") })],
+                "A3",
+            );
 
             expect(dépôt(Subject).findOneBy).toHaveBeenCalledTimes(1);
         });
 
         it("n'interroge la base qu'une fois par enseignant", async () => {
-            await Importer.instance.importLessons(caches, source, [parsed(), parsed({ start: new Date("2026-09-11T06:00:00.000Z") })], "A3");
+            await Importer.instance.importLessons(
+                caches,
+                source,
+                [parsed(), parsed({ start: new Date("2026-09-11T06:00:00.000Z") })],
+                "A3",
+            );
 
             expect(dépôt(Teacher).findOneBy).toHaveBeenCalledTimes(1);
         });
 
         it("n'interroge la base qu'une fois par groupe", async () => {
-            await Importer.instance.importLessons(caches, source, [parsed(), parsed({ start: new Date("2026-09-11T06:00:00.000Z") })], "A3");
+            await Importer.instance.importLessons(
+                caches,
+                source,
+                [parsed(), parsed({ start: new Date("2026-09-11T06:00:00.000Z") })],
+                "A3",
+            );
 
             expect(dépôt(StudentGroup).findOneBy).toHaveBeenCalledTimes(1);
         });
@@ -303,7 +313,12 @@ describe("Importer", () => {
         it("garde l'intitulé en base face à une case qui ne donne que le code", async () => {
             dépôt(Subject).findOneBy.mockResolvedValue({ id: 7, code: "S5A.02", label: "Projet tutoré" });
 
-            await Importer.instance.importLessons(caches, source, [parsed({ subjectCode: "S5A.02", subjectLabel: "S5A.02" })], "A3");
+            await Importer.instance.importLessons(
+                caches,
+                source,
+                [parsed({ subjectCode: "S5A.02", subjectLabel: "S5A.02" })],
+                "A3",
+            );
 
             expect(dépôt(Subject).save).not.toHaveBeenCalled();
         });

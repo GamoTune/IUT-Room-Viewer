@@ -9,11 +9,11 @@
 
 Trois façons de consulter la même donnée :
 
-| | |
-| --- | --- |
-| 🌐 **Site** | [iut.gamo.one](https://iut.gamo.one) — salles libres et emplois du temps |
+|                    |                                                                                                                                                                                                                                                 |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🌐 **Site**        | [iut.gamo.one](https://iut.gamo.one) — salles libres et emplois du temps                                                                                                                                                                        |
 | 🤖 **Bot Discord** | [Ajouter au serveur](https://discord.com/oauth2/authorize?client_id=1331626843257966613&permissions=2147485696&integration_type=0&scope=bot) · [en intégration personnelle](https://discord.com/oauth2/authorize?client_id=1331626843257966613) |
-| 🔌 **API REST** | [`/docs`](https://iut-room-viewer.gamo.one/docs) — ouverte, sans authentification |
+| 🔌 **API REST**    | [`/docs`](https://iut-room-viewer.gamo.one/docs) — ouverte, sans authentification                                                                                                                                                               |
 
 ---
 
@@ -48,18 +48,18 @@ changements d'heure compris.
 
 ### Les routes
 
-| Méthode | Route | Clé | Ce qu'elle rend |
-| --- | --- | :-: | --- |
-| `GET` | `/health` | | État du service |
-| `GET` | `/api/v1/rooms` | | Le référentiel des salles |
-| `GET` | `/api/v1/rooms/availability` | | Les salles **et** ce qui les occupe sur une période |
-| `GET` | `/api/v1/groups` | | Les groupes publiés par l'IUT |
-| `GET` | `/api/v1/schedule` | | L'emploi du temps d'un groupe, pour une journée |
-| `GET` | `/api/v2/courses` | | Les cours d'une période, filtrables |
-| `GET` | `/api/v1/sync/status` | | Où en est la synchronisation |
-| `POST` | `/api/v1/sync/trigger` | 🔐 | Déclenche une synchronisation |
-| `POST` | `/api/v1/sync/reset` | 🔐 | Reprend tout, en ignorant le cache |
-| `POST` | `/api/v1/stats/log` | 🔐 | Journalise une commande du bot |
+| Méthode | Route                        | Clé | Ce qu'elle rend                                     |
+| ------- | ---------------------------- | :-: | --------------------------------------------------- |
+| `GET`   | `/health`                    |     | État du service                                     |
+| `GET`   | `/api/v1/rooms`              |     | Le référentiel des salles                           |
+| `GET`   | `/api/v1/rooms/availability` |     | Les salles **et** ce qui les occupe sur une période |
+| `GET`   | `/api/v1/groups`             |     | Les groupes publiés par l'IUT                       |
+| `GET`   | `/api/v1/schedule`           |     | L'emploi du temps d'un groupe, pour une journée     |
+| `GET`   | `/api/v2/courses`            |     | Les cours d'une période, filtrables                 |
+| `GET`   | `/api/v1/sync/status`        |     | Où en est la synchronisation                        |
+| `POST`  | `/api/v1/sync/trigger`       | 🔐  | Déclenche une synchronisation                       |
+| `POST`  | `/api/v1/sync/reset`         | 🔐  | Reprend tout, en ignorant le cache                  |
+| `POST`  | `/api/v1/stats/log`          | 🔐  | Journalise une commande du bot                      |
 
 🔐 En-tête `X-API-Key`. Ces routes écrivent : elles ne servent pas à consulter.
 
@@ -114,7 +114,7 @@ Trois choses à savoir :
 
 ### v1 ou v2 ?
 
-La v1 rend les cours *par salle*, avec des groupes numériques
+La v1 rend les cours _par salle_, avec des groupes numériques
 (`{ mainGroup: -1, subGroup: -1 }` pour une promotion) qu'il faut savoir lire. La
 v2 rend une liste de cours déjà lisibles. **Pour afficher un emploi du temps,
 prenez la v2** ; pour l'occupation des salles, la v1 est la seule.
@@ -130,12 +130,12 @@ Les deux répondent sous la même enveloppe :
 
 ## 🤖 Commandes Discord
 
-| Commande | Description |
-| --- | --- |
-| `/help` | L'aide |
+| Commande             | Description                             |
+| -------------------- | --------------------------------------- |
+| `/help`              | L'aide                                  |
 | `/salles_maintenant` | L'état de toutes les salles à l'instant |
-| `/salles_entre` | L'état des salles entre deux horaires |
-| `/edt_prof` | Les cours d'un enseignant |
+| `/salles_entre`      | L'état des salles entre deux horaires   |
+| `/edt_prof`          | Les cours d'un enseignant               |
 
 `/salles_entre` prend `heure_début` et `heure_fin` (obligatoires), plus
 `minute_debut`, `minute_fin`, `jour`, `mois` et `année` pour viser un autre moment
@@ -254,16 +254,16 @@ n'instrumente pas les branches.
 
 ## 🔧 Technologies
 
-| | |
-| --- | --- |
-| **Runtime** | Bun, TypeScript strict |
-| **API** | Express, OpenAPI (Swagger UI) |
-| **Base** | PostgreSQL, TypeORM |
-| **Lecture des PDF** | pdfjs-dist |
-| **Bot** | discord.js v14 |
-| **Site** | Vue 3, Vite, [@gamo/ds](https://forge.gamo.one) |
-| **Planification** | node-cron |
-| **Production** | PM2 |
+|                     |                                                 |
+| ------------------- | ----------------------------------------------- |
+| **Runtime**         | Bun, TypeScript strict                          |
+| **API**             | Express, OpenAPI (Swagger UI)                   |
+| **Base**            | PostgreSQL, TypeORM                             |
+| **Lecture des PDF** | pdfjs-dist                                      |
+| **Bot**             | discord.js v14                                  |
+| **Site**            | Vue 3, Vite, [@gamo/ds](https://forge.gamo.one) |
+| **Planification**   | node-cron                                       |
+| **Production**      | PM2                                             |
 
 ---
 

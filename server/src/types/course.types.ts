@@ -3,7 +3,6 @@
 // Contrôleur pour les cours (handlers Express)
 // ============================================
 
-
 // ============================================
 // Types pour les réponses de l'API
 
@@ -15,9 +14,8 @@ export interface Course {
     groups: string[];
     teacher: string;
     start_at: string; // ISO date string
-    end_at: string;   // ISO date string
+    end_at: string; // ISO date string
 }
-
 
 export interface CourseResult {
     id: number;

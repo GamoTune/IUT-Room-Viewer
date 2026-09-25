@@ -3,16 +3,7 @@
 // Commande exécutée
 // ============================================
 
-import {
-    Column,
-    CreateDateColumn,
-    Entity,
-    Index,
-    JoinColumn,
-    ManyToOne,
-    PrimaryGeneratedColumn,
-    type Relation,
-} from "typeorm";
+import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn, type Relation } from "typeorm";
 import { User } from "./user.entity.js";
 
 /** Une commande du bot, conservée pour les statistiques d'usage. */

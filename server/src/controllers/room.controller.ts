@@ -13,7 +13,7 @@ import type { ApiResponse, Room, RoomWithLessonsResponse } from "../types/index.
 
 /**
  * Contrôleur pour les opérations sur les salles
- * 
+ *
  * Un contrôleur contient les handlers Express.
  * Il gère la requête HTTP et délègue la logique au service.
  */

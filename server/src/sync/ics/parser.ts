@@ -77,21 +77,14 @@ function decodeValue(property: IcsProperty): string {
     let value = property.value;
 
     if (encoding === "QUOTED-PRINTABLE") {
-        value = value
-            .replace(/=\n/g, "")
-            .replace(QUOTED_PRINTABLE_SEQUENCE, (match, hex: string) => {
-                const byte = Number.parseInt(hex, 16);
-                return Number.isNaN(byte) ? match : String.fromCharCode(byte);
-            });
+        value = value.replace(/=\n/g, "").replace(QUOTED_PRINTABLE_SEQUENCE, (match, hex: string) => {
+            const byte = Number.parseInt(hex, 16);
+            return Number.isNaN(byte) ? match : String.fromCharCode(byte);
+        });
     }
 
     // Échappements standard du format ICS
-    return value
-        .replace(/\\n/gi, " ")
-        .replace(/\\,/g, ",")
-        .replace(/\\;/g, ";")
-        .replace(/\\\\/g, "\\")
-        .trim();
+    return value.replace(/\\n/gi, " ").replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\\\/g, "\\").trim();
 }
 
 /**
@@ -137,14 +130,7 @@ export function parseIcsDate(value: string, tzid?: string): Date | null {
 
     const [, year, month, day, hour = "00", minute = "00", second = "00", zulu] = match;
 
-    const naiveUtc = Date.UTC(
-        Number(year),
-        Number(month) - 1,
-        Number(day),
-        Number(hour),
-        Number(minute),
-        Number(second),
-    );
+    const naiveUtc = Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
 
     if (zulu) return new Date(naiveUtc);
 

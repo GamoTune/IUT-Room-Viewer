@@ -35,13 +35,7 @@ function parisOffsetMinutes(instant: Date): number {
  * l'avoir appliqué — ce qui compte de part et d'autre du changement d'heure.
  */
 export function parisToUtc(date: Date, minutesFromMidnight: number): Date {
-    const naive = Date.UTC(
-        date.getUTCFullYear(),
-        date.getUTCMonth(),
-        date.getUTCDate(),
-        0,
-        minutesFromMidnight,
-    );
+    const naive = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 0, minutesFromMidnight);
 
     let offset = parisOffsetMinutes(new Date(naive));
     const instant = naive - offset * 60000;
